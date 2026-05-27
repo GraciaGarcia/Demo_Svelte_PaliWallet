@@ -23,6 +23,7 @@ export async function sendNativeEvmTransfer(params: {
       receipt: import('ethers').ContractTransactionReceipt
       newBalance: string
       transactions: StoredTx[]
+      explorerUrl?: string | null
     }
   | { ok: false; message: string }
 > {
@@ -57,20 +58,33 @@ export async function sendNativeEvmTransfer(params: {
     const newBalance = ethers.formatEther(rawBalance)
 
     const explorerUrl = getBlockExplorerTxUrl(chainId, tx.hash)
+    
+    // Mostrar mensaje de éxito con enlace al explorador
     if (explorerUrl) {
       const shouldOpenExplorer = confirm(
-        `✅ Transferencia exitosa!\n\n` +
+        `✅ ¡Transferencia exitosa!\n\n` +
           `Hash: ${tx.hash.slice(0, 10)}...${tx.hash.slice(-8)}\n` +
           `Bloque: ${receipt.blockNumber}\n` +
-          `Gas usado: ${receipt.gasUsed}\n\n` +
-          `¿Deseas ver la transacción en el explorador de bloques?`
+          `Gas usado: ${receipt.gasUsed.toString()}\n\n` +
+          `🔗 Enlace al explorador:\n${explorerUrl}\n\n` +
+          `¿Deseas abrir el explorador de bloques ahora?`
       )
-      if (shouldOpenExplorer) window.open(explorerUrl, '_blank')
+      if (shouldOpenExplorer) {
+        window.open(explorerUrl, '_blank')
+      } else {
+        // Copiar enlace al portapapeles como alternativa
+        navigator.clipboard.writeText(explorerUrl).then(() => {
+          alert(`📋 Enlace copiado al portapapeles:\n${explorerUrl}`)
+        }).catch(() => {
+          // Si falla copiar, solo mostrar el enlace
+          console.log('Enlace al explorador:', explorerUrl)
+        })
+      }
     } else {
       alert(`✅ Transferencia exitosa!\n\nHash: ${tx.hash}\nBloque: ${receipt.blockNumber}`)
     }
 
-    return { ok: true, txHash: tx.hash, receipt, newBalance, transactions }
+    return { ok: true, txHash: tx.hash, receipt, newBalance, transactions, explorerUrl }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return { ok: false, message: msg }

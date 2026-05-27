@@ -392,6 +392,22 @@
       }
       balance = result.newBalance
       transactions = result.transactions
+      
+      // Mostrar mensaje adicional con el enlace al explorador
+      if (result.explorerUrl) {
+        setTimeout(() => {
+          const viewExplorer = confirm(
+            `🎉 ¡Transferencia completada con éxito!\n\n` +
+            `Tu transacción ha sido registrada en la blockchain.\n\n` +
+            `🔗 Ver en el explorador:\n${result.explorerUrl}\n\n` +
+            `¿Quieres abrir el explorador ahora?`
+          )
+          if (viewExplorer) {
+            window.open(result.explorerUrl, '_blank')
+          }
+        }, 500)
+      }
+      
       transferDestination = ''
       transferAmount = ''
       showTransferSummary = false
