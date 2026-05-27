@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  pali-wallet-dapp:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    container_name: pali-wallet-dapp

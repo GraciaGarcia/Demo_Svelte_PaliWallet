@@ -1,4 +1,33 @@
-# Svelte + TS + Vite
+# Svelte + TS + Vite (Pali Wallet DApp)
+
+## Estructura del código
+
+| Ruta | Rol |
+|------|-----|
+| `src/App.svelte` | Orquestación: estado global, conexión y eventos entre vistas |
+| `src/components/layout/` | Barra lateral (`AppSidebar.svelte`) |
+| `src/components/views/` | Pantallas informativas (home, conectar, descripción, objetivos, etc.) |
+| `src/components/wallet/` | `WalletPanel`, `NetworkSwitcher`, historial de redes y de tx |
+| `src/components/transfer/` | Formulario y resumen de transferencia (`TransferView`) |
+| `src/components/ui/` | Piezas reutilizables (`ErrorToast`) |
+| `src/lib/chains/` | `evmWalletNetworks.ts` (hex + RPC), `networks.ts` (derivado) |
+| `src/lib/wallet/` | Detección, listeners, desconexión, **historial de cambios de red** |
+| `src/lib/transactions/` | Historial de tx en `localStorage` (`history.ts`) |
+| `src/lib/transfers/` | Validación y envío EVM (`prepare.ts`, `evmTransfer.ts`) |
+| `src/lib/format/` | Utilidades de texto (`address.ts`) |
+
+### Cumplimiento vs rúbrica (resumen)
+
+| Requisito | Estado |
+|-----------|--------|
+| Login Web3 con Pali | Sí |
+| Cambio de red (zkSYS, Hoodi, Sepolia…) + añadir si no existe | Sí: `NetworkSwitcher` con `wallet_switchEthereumChain` y en **4902** `wallet_addEthereumChain` usando **chainId en hex** y los datos de tu archivo (+ Syscoin NEVM 57). |
+| Retirar redes de la DApp | Sí: `removed_networks` en `localStorage` + sección retiradas + **Sincronizar** como en tu código. |
+| Historial de tx por red + enlace a explorador | Las tx **enviadas desde la DApp** se guardan por cuenta+red y enlazan a `/tx/...`. **No** se importa aún el historial completo vía API del explorador (requeriría API keys / backend). |
+| Historial de **redes** + explorador | Sí: se registra cada cambio real de red y en EVM hay enlace a la base del explorador. |
+| Docker / cloud | Sin cambio aquí (ya tienes Dockerfile / compose). |
+
+---
 
 This template should help get you started developing with Svelte and TypeScript in Vite.
 

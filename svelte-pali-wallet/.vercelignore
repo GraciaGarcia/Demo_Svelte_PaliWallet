@@ -1,0 +1,10 @@
+# Archivos que Vercel NO debe subir
+node_modules
+.git
+.env.local
+.DS_Store
+*.log
+.vscode
+.idea
+
+# Solo se despliega la carpeta 'dist' después del build
