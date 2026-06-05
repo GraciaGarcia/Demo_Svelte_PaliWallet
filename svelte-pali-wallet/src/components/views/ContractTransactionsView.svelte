@@ -121,11 +121,14 @@
   }
 
   async function saveTransactionsToDatabase(transactions) {
-    const API_URL = 'http://localhost:3001/api/transactions'
+    // Usar Netlify Function en producción, localhost en desarrollo
+    const API_URL = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001/api/transactions'
+      : '/.netlify/functions/save-transaction'
     
     for (const tx of transactions) {
       try {
-        await fetch(API_URL, {
+        const response = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -141,8 +144,14 @@
             explorer_url: `https://sepolia.etherscan.io/tx/${tx.hash}`
           })
         })
+        
+        if (response.ok) {
+          console.log('✅ Transacción guardada en BD:', tx.hash)
+        } else {
+          console.warn('⚠️ Error guardando:', tx.hash, await response.text())
+        }
       } catch (err) {
-        console.warn('No se pudo guardar en BD:', err)
+        console.warn('❌ No se pudo guardar en BD:', tx.hash, err)
       }
     }
   }
