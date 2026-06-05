@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte'
   import { ethers } from 'ethers'
+  import { saveTransactionToSupabase } from '../../lib/api/supabase'
 
   export let chainId = ''
   export let currentNetwork = ''
@@ -110,8 +111,8 @@
       // Ordenar por timestamp descendente
       contractTransactions = allTxs.sort((a, b) => b.timestamp - a.timestamp)
       
-      // Guardar en la base de datos
-      await saveTransactionsToDatabase(allTxs)
+      // Guardar en Supabase (más simple y confiable)
+      await saveTransactionsToSupabase(allTxs)
     } catch (err) {
       console.error('Error cargando transacciones del contrato:', err)
       error = err instanceof Error ? err.message : String(err)
@@ -120,40 +121,33 @@
     }
   }
 
-  async function saveTransactionsToDatabase(transactions) {
-    // Usar Netlify Function en producción, localhost en desarrollo
-    const API_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001/api/transactions'
-      : '/.netlify/functions/save-transaction'
+  async function saveTransactionsToSupabase(transactions) {
+    console.log(`💾 Guardando ${transactions.length} transacciones en Supabase...`)
     
     for (const tx of transactions) {
       try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            hash: tx.hash,
-            from_address: tx.from,
-            to_address: tx.to,
-            value: tx.amount,
-            network: currentNetwork,
-            chain_id: chainId,
-            wallet_address: address.toLowerCase(),
-            status: 'success',
-            block_number: tx.blockNumber,
-            explorer_url: `https://sepolia.etherscan.io/tx/${tx.hash}`
-          })
+        const saved = await saveTransactionToSupabase({
+          hash: tx.hash,
+          from_address: tx.from,
+          to_address: tx.to,
+          value: tx.amount,
+          network: currentNetwork,
+          chain_id: chainId,
+          wallet_address: address.toLowerCase(),
+          status: 'success',
+          block_number: tx.blockNumber,
+          explorer_url: `https://sepolia.etherscan.io/tx/${tx.hash}`
         })
         
-        if (response.ok) {
-          console.log('✅ Transacción guardada en BD:', tx.hash)
-        } else {
-          console.warn('⚠️ Error guardando:', tx.hash, await response.text())
+        if (!saved) {
+          console.warn('⚠️ No se guardó:', tx.hash)
         }
       } catch (err) {
-        console.warn('❌ No se pudo guardar en BD:', tx.hash, err)
+        console.error('❌ Error guardando:', tx.hash, err)
       }
     }
+    
+    console.log('✅ Proceso de guardado completado')
   }
 
   function formatDate(timestamp) {

@@ -1,70 +1,116 @@
 # Svelte + TS + Vite (Pali Wallet DApp)
 
-## 🗄️ Base de Datos PostgreSQL - Historial de Transacciones
+## 🗄️ Base de Datos - Historial de Transacciones (Supabase)
 
-Este proyecto guarda automáticamente las transacciones del contrato en una base de datos PostgreSQL (Neon) usando Netlify Functions.
+Este proyecto guarda automáticamente las transacciones del contrato en Supabase (PostgreSQL con API REST automática).
 
-### 📊 Configuración de Base de Datos
+### � Configuración de Supabase (5 minutos)
 
-**Base de Datos:** Neon PostgreSQL  
-**Conexión:**
-```
-postgresql://neondb_owner:npg_6v5yUDLqJQNf@ep-quiet-surf-a-poert7a-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
-```
+**1. Crear cuenta en Supabase:**
+- Ve a https://supabase.com
+- Crea cuenta gratis
+- New Project → Elige nombre, contraseña y región
 
-**Tabla:** `transactions`
+**2. Crear tabla `transactions`:**
+
+En Supabase Dashboard → SQL Editor → New query:
 
 ```sql
+-- Crear tabla
 CREATE TABLE transactions (
-  id SERIAL PRIMARY KEY,
+  id BIGSERIAL PRIMARY KEY,
   hash VARCHAR(66) NOT NULL UNIQUE,
   from_address VARCHAR(42) NOT NULL,
   to_address VARCHAR(42) NOT NULL,
-  value DECIMAL(20, 8) NOT NULL,
+  value NUMERIC(20, 8) NOT NULL,
   network VARCHAR(50) NOT NULL,
   chain_id VARCHAR(20) NOT NULL,
   wallet_address VARCHAR(42) NOT NULL,
   status VARCHAR(20) DEFAULT 'success',
   block_number BIGINT,
   explorer_url TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Índices para optimizar consultas
 CREATE INDEX idx_wallet_address ON transactions(wallet_address);
 CREATE INDEX idx_network ON transactions(network);
 CREATE INDEX idx_created_at ON transactions(created_at DESC);
+CREATE INDEX idx_hash ON transactions(hash);
+
+-- Habilitar Row Level Security (opcional pero recomendado)
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+
+-- Política: Permitir INSERT a todos (anon role)
+CREATE POLICY "Allow public insert" ON transactions
+  FOR INSERT TO anon
+  WITH CHECK (true);
+
+-- Política: Permitir SELECT a todos
+CREATE POLICY "Allow public select" ON transactions
+  FOR SELECT TO anon
+  USING (true);
 ```
 
-### 🔧 Arquitectura de Persistencia
+**3. Obtener credenciales:**
+
+En Supabase Dashboard → Settings → API:
+- Copia `Project URL` → será tu `VITE_SUPABASE_URL`
+- Copia `anon public` key → será tu `VITE_SUPABASE_ANON_KEY`
+
+**4. Configurar variables de entorno:**
+
+Crea archivo `.env` en la raíz del proyecto:
+
+```env
+VITE_SUPABASE_URL=https://xxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI...
+```
+
+**5. En Netlify:**
+
+Site settings → Environment variables → Add:
+```
+VITE_SUPABASE_URL = https://xxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### 📊 Arquitectura con Supabase
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Frontend (Netlify)                                     │
 │  src/components/views/ContractTransactionsView.svelte  │
-│    - Lee transacciones desde blockchain (eventos)      │
+│    - Lee transacciones desde blockchain                │
 │    - Muestra en UI                                      │
-│    - Envía a Netlify Function para guardar             │
+│    - Llama a saveTransactionToSupabase()                │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Netlify Function (Serverless)                          │
-│  netlify/functions/save-transaction.js                  │
-│    - Recibe transacción del frontend                    │
-│    - Valida datos                                       │
-│    - Guarda en PostgreSQL                               │
+│  src/lib/api/supabase.ts                                │
+│    - fetch() directo a Supabase REST API                │
+│    - POST /rest/v1/transactions                         │
+│    - Headers: apikey, Authorization                     │
 └────────────────┬────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────┐
-│  PostgreSQL (Neon)                                      │
-│  Tabla: transactions                                    │
-│    - Almacenamiento persistente                         │
-│    - Índices optimizados                                │
-│    - Constraint UNIQUE en hash (evita duplicados)       │
+│  Supabase (PostgreSQL + API REST automática)            │
+│    - Recibe POST automáticamente                        │
+│    - Valida con Row Level Security                      │
+│    - INSERT en tabla transactions                       │
+│    - UNIQUE(hash) previene duplicados                   │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**Ventajas de Supabase:**
+- ✅ No necesitas código backend (API REST automática)
+- ✅ No necesitas Netlify Functions
+- ✅ Más simple y directo
+- ✅ Dashboard visual para ver datos
+- ✅ Gratis hasta 500MB de BD
+- ✅ Backups automáticos
 
 ### 📁 Archivos Importantes
 
