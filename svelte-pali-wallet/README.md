@@ -1,5 +1,16 @@
 # Svelte + TS + Vite (Pali Wallet DApp)
 
+# Svelte + TS + Vite (Pali Wallet DApp)
+
+## 🔗 Enlaces Rápidos
+
+- 🗄️ **Base de Datos (Supabase)**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv
+- 📊 **Ver Tabla Transactions**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv/editor
+- 🔧 **SQL Editor**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv/sql
+- 📈 **Logs**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv/logs
+
+---
+
 ## 🗄️ Base de Datos - Historial de Transacciones (Supabase)
 
 Este proyecto guarda automáticamente las transacciones del contrato en Supabase (PostgreSQL con API REST automática).
