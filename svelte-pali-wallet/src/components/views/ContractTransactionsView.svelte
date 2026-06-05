@@ -109,11 +109,41 @@
 
       // Ordenar por timestamp descendente
       contractTransactions = allTxs.sort((a, b) => b.timestamp - a.timestamp)
+      
+      // Guardar en la base de datos
+      await saveTransactionsToDatabase(allTxs)
     } catch (err) {
       console.error('Error cargando transacciones del contrato:', err)
       error = err instanceof Error ? err.message : String(err)
     } finally {
       loading = false
+    }
+  }
+
+  async function saveTransactionsToDatabase(transactions) {
+    const API_URL = 'http://localhost:3001/api/transactions'
+    
+    for (const tx of transactions) {
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hash: tx.hash,
+            from_address: tx.from,
+            to_address: tx.to,
+            value: tx.amount,
+            network: currentNetwork,
+            chain_id: chainId,
+            wallet_address: address.toLowerCase(),
+            status: 'success',
+            block_number: tx.blockNumber,
+            explorer_url: `https://sepolia.etherscan.io/tx/${tx.hash}`
+          })
+        })
+      } catch (err) {
+        console.warn('No se pudo guardar en BD:', err)
+      }
     }
   }
 
