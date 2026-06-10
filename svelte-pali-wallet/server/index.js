@@ -6,18 +6,35 @@ const { Pool } = pg;
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Pool de conexiones a PostgreSQL
+// Pool de conexiones a Neon PostgreSQL
 const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_6v5yUDLqJQNf@ep-quiet-surf-a-poert7a-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require',
+  connectionString: 'postgresql://neondb_owner:npg_6v5yUDLqJQNf@ep-quiet-surf-apoert7a-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require',
   ssl: { rejectUnauthorized: false }
+});
+
+// Verificar conexión al iniciar
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Error conectando a Neon PostgreSQL:', err.stack);
+  } else {
+    console.log('✅ Conectado a Neon PostgreSQL');
+    release();
+  }
 });
 
 app.use(cors());
 app.use(express.json());
 
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Server running' });
+});
+
 // Guardar transacción
 app.post('/api/transactions', async (req, res) => {
   const { hash, from_address, to_address, value, network, chain_id, wallet_address, status, block_number, explorer_url } = req.body;
+
+  console.log('📥 Recibiendo transacción:', { hash, from_address, to_address, value, network });
 
   try {
     const query = `
@@ -28,13 +45,27 @@ app.post('/api/transactions', async (req, res) => {
     `;
 
     const result = await pool.query(query, [
-      hash, from_address, to_address, value || '0', network || 'unknown', 
-      chain_id || '0', wallet_address, status || 'success', block_number || null, explorer_url || null
+      hash, 
+      from_address.toLowerCase(), 
+      to_address.toLowerCase(), 
+      value || '0', 
+      network || 'unknown', 
+      chain_id || '0', 
+      wallet_address.toLowerCase(), 
+      status || 'success', 
+      block_number || null, 
+      explorer_url || null
     ]);
 
-    res.json({ success: true, data: result.rows[0] });
+    if (result.rows.length > 0) {
+      console.log('✅ Transacción guardada:', hash);
+      res.json({ success: true, data: result.rows[0] });
+    } else {
+      console.log('⚠️ Transacción duplicada (ya existe):', hash);
+      res.json({ success: true, message: 'Duplicate transaction, already exists' });
+    }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Error guardando transacción:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -54,4 +85,12 @@ app.get('/api/transactions/:wallet_address', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log('🚀 ================================');
+  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+  console.log('🗄️  Conectado a Neon PostgreSQL');
+  console.log('📡 Endpoints disponibles:');
+  console.log(`   - POST http://localhost:${PORT}/api/transactions`);
+  console.log(`   - GET  http://localhost:${PORT}/api/transactions/:wallet_address`);
+  console.log('🚀 ================================');
+});

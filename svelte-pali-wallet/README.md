@@ -1,13 +1,11 @@
 # Svelte + TS + Vite (Pali Wallet DApp)
 
-# Svelte + TS + Vite (Pali Wallet DApp)
-
 ## 🔗 Enlaces Rápidos
 
-- 🗄️ **Base de Datos (Supabase)**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv
-- 📊 **Ver Tabla Transactions**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv/editor
-- 🔧 **SQL Editor**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv/sql
-- 📈 **Logs**: https://supabase.com/dashboard/project/tyrlsmxwnzwdvrducobv/logs
+- 🗄️ **Base de Datos (Neon PostgreSQL)**: https://console.neon.tech/
+- � **Guía de Ejecución Local**: [EJECUTAR_LOCAL.md](./EJECUTAR_LOCAL.md)
+- � **SQL Editor (Neon)**: https://console.neon.tech/
+- � **Contrato en Etherscan**: https://sepolia.etherscan.io/address/0x1fC9203ECC40dFC072bd4b087FE70004A1D2340F
 
 ---
 
@@ -132,7 +130,47 @@ VITE_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 | `src/components/views/ContractTransactionsView.svelte` | Lee blockchain y envía a función |
 | `netlify.toml` | Configuración de Netlify Functions |
 
-### 🚀 Cómo Funciona
+### � Arquitectura con Neon PostgreSQL
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Frontend (Svelte + Vite)                               │
+│  http://localhost:5173                                  │
+│  src/components/views/ContractTransactionsView.svelte  │
+│    - Lee transacciones desde blockchain (ethers.js)    │
+│    - Muestra en UI                                      │
+│    - Llama a saveTransactionToNeon()                    │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 │ fetch('http://localhost:3001/api/transactions')
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│  Backend (Node.js + Express)                            │
+│  http://localhost:3001                                  │
+│  server/index.js                                        │
+│    - Recibe POST /api/transactions                      │
+│    - Valida datos                                       │
+│    - Ejecuta INSERT con pg                              │
+└────────────────┬────────────────────────────────────────┘
+                 │
+                 │ pool.query(INSERT INTO transactions...)
+                 ▼
+┌─────────────────────────────────────────────────────────┐
+│  Neon PostgreSQL (Cloud)                                │
+│  ep-quiet-surf-apoert7a-pooler.us-east-1.aws.neon.tech │
+│    - Recibe conexión SSL                                │
+│    - INSERT en tabla transactions                       │
+│    - UNIQUE(hash) previene duplicados                   │
+│    - ON CONFLICT DO NOTHING                             │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Ventajas de Neon:**
+- ✅ PostgreSQL completo (no limitaciones de API)
+- ✅ Dashboard visual para ver datos
+- ✅ Gratis hasta 0.5GB de almacenamiento
+- ✅ Escalable (branching de BD)
+- ✅ Compatible con herramientas PostgreSQL estándar
 
 1. **Usuario ve "Transacciones del Contrato"**
    - El componente `ContractTransactionsView.svelte` se carga

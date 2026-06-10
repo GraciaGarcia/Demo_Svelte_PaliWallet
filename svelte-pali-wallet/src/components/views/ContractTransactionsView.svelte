@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte'
   import { ethers } from 'ethers'
-  import { saveTransactionToSupabase } from '../../lib/api/supabase'
+  import { saveTransactionToNeon } from '../../lib/api/neon'
 
   export let chainId = ''
   export let currentNetwork = ''
@@ -111,8 +111,8 @@
       // Ordenar por timestamp descendente
       contractTransactions = allTxs.sort((a, b) => b.timestamp - a.timestamp)
       
-      // Guardar en Supabase (más simple y confiable)
-      await saveTransactionsToSupabase(allTxs)
+      // Guardar en Neon PostgreSQL
+      await saveTransactionsToNeon(allTxs)
     } catch (err) {
       console.error('Error cargando transacciones del contrato:', err)
       error = err instanceof Error ? err.message : String(err)
@@ -121,12 +121,12 @@
     }
   }
 
-  async function saveTransactionsToSupabase(transactions) {
-    console.log(`💾 Guardando ${transactions.length} transacciones en Supabase...`)
+  async function saveTransactionsToNeon(transactions) {
+    console.log(`💾 Guardando ${transactions.length} transacciones en Neon PostgreSQL...`)
     
     for (const tx of transactions) {
       try {
-        const saved = await saveTransactionToSupabase({
+        const saved = await saveTransactionToNeon({
           hash: tx.hash,
           from_address: tx.from,
           to_address: tx.to,
