@@ -13,6 +13,9 @@
     { id: 'contracts', label: 'Contratos', icon: '📝' },
     { id: 'networks', label: 'Redes', icon: '🌐' },
     { id: 'network-history', label: 'Historial Redes', icon: '🕐' },
+    { id: 'balance-checker', label: 'Consultar Saldo', icon: '💰' },
+    { id: 'faucet', label: 'Faucet', icon: '🚰' },
+    { id: 'faucet-history', label: 'Historial Faucet', icon: '📋' },
   ]
 </script>
 

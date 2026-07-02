@@ -4,6 +4,16 @@
   export let connected = false
 
   const dispatch = createEventDispatcher()
+
+  function handleExplore() {
+    console.log('🚀 HomeView - Botón Explorar clickeado')
+    dispatch('explore')
+  }
+
+  function handleWallet() {
+    console.log('💼 HomeView - Botón Wallet clickeado, connected:', connected)
+    dispatch('wallet', { connected })
+  }
 </script>
 
 <div class="home-view">
@@ -19,12 +29,8 @@
   <p class="home-subtitle">Tu puerta de entrada al mundo Web3</p>
 
   <div class="home-buttons">
-    <button type="button" class="btn-explore" on:click={() => dispatch('explore')}>Explorar</button>
-    <button
-      type="button"
-      class="btn-wallet"
-      on:click={() => dispatch('wallet', { connected })}
-    >
+    <button type="button" class="btn-explore" on:click={handleExplore}>Explorar</button>
+    <button type="button" class="btn-wallet" on:click={handleWallet}>
       ir a Wallet
     </button>
   </div>

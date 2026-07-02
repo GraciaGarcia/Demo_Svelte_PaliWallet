@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test RPC Hoodi</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
+</head>
+<body>
+    <h1>🔍 Test de Conexión al Contrato Faucet en Hoodi</h1>
+    
+    <h2>Contrato:</h2>
+    <p><code>0x811278B0518bCE88a87de7f8E82c1Ac16649E6ac</code></p>
+    
+    <h2>RPCs a probar:</h2>
+    <button onclick="testRPC('https://rpc.hoodi.fi')">Test: rpc.hoodi.fi</button>
+    <button onclick="testRPC('https://rpc.hoodi.network')">Test: rpc.hoodi.network</button>
+    <button onclick="testRPC('https://rpc-testnet.hoodi.network')">Test: rpc-testnet.hoodi.network</button>
+    <button onclick="testWithWallet()">Test: Con Pali Wallet</button>
+    
+    <h2>Resultados:</h2>
+    <pre id="results"></pre>
+    
+    <script>
+        const contractAddress = '0x811278B0518bCE88a87de7f8E82c1Ac16649E6ac'
+        const abi = [
+            "function getBalance() external view returns (uint256)",
+            "function amount() external view returns (uint256)",
+            "function cooldown() external view returns (uint256)",
+            "function owner() external view returns (address)"
+        ]
+        
+        function log(message) {
+            document.getElementById('results').innerHTML += message + '\n'
+            console.log(message)
+        }
+        
+        async function testRPC(rpcUrl) {
+            log('\n========================================')
+            log('🧪 Probando RPC: ' + rpcUrl)
+            log('========================================')
+            
+            try {
+                log('📡 Conectando al RPC...')
+                const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
+                
+                log('✅ Conectado. Probando red...')
+                const network = await provider.getNetwork()
+                log('   Chain ID: ' + network.chainId)
+                
+                log('📄 Conectando al contrato...')
+                const contract = new ethers.Contract(contractAddress, abi, provider)
+                
+                log('📞 Llamando a getBalance()...')
+                const balance = await contract.getBalance()
+                log('   Balance: ' + ethers.utils.formatEther(balance) + ' ETH')
+                
+                log('📞 Llamando a amount()...')
+                const amount = await contract.amount()
+                log('   Amount: ' + ethers.utils.formatEther(amount) + ' ETH')
+                
+                log('📞 Llamando a cooldown()...')
+                const cooldown = await contract.cooldown()
+                log('   Cooldown: ' + cooldown.toNumber() + ' segundos (' + (cooldown.toNumber()/60) + ' minutos)')
+                
+                log('📞 Llamando a owner()...')
+                const owner = await contract.owner()
+                log('   Owner: ' + owner)
+                
+                log('✅ ¡TODO FUNCIONA CON ESTE RPC!')
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message)
+                log('Detalles: ' + error.toString())
+            }
+        }
+        
+        async function testWithWallet() {
+            log('\n========================================')
+            log('🦊 Probando con Pali Wallet / MetaMask')
+            log('========================================')
+            
+            try {
+                if (!window.ethereum && !window.pali) {
+                    log('❌ No se detectó Pali Wallet ni MetaMask')
+                    return
+                }
+                
+                const ethereum = window.ethereum || window.pali
+                log('✅ Wallet detectada')
+                
+                log('📡 Conectando...')
+                const provider = new ethers.providers.Web3Provider(ethereum)
+                
+                log('✅ Conectado. Probando red...')
+                const network = await provider.getNetwork()
+                log('   Chain ID: ' + network.chainId)
+                
+                if (network.chainId !== 17001) {
+                    log('⚠️ ATENCIÓN: No estás en la red Hoodi (Chain ID 17001)')
+                    log('   Por favor cambia a Hoodi Testnet en tu wallet')
+                    return
+                }
+                
+                log('📄 Conectando al contrato...')
+                const contract = new ethers.Contract(contractAddress, abi, provider)
+                
+                log('📞 Llamando a getBalance()...')
+                const balance = await contract.getBalance()
+                log('   Balance: ' + ethers.utils.formatEther(balance) + ' ETH')
+                
+                log('📞 Llamando a amount()...')
+                const amount = await contract.amount()
+                log('   Amount: ' + ethers.utils.formatEther(amount) + ' ETH')
+                
+                log('📞 Llamando a cooldown()...')
+                const cooldown = await contract.cooldown()
+                log('   Cooldown: ' + cooldown.toNumber() + ' segundos (' + (cooldown.toNumber()/60) + ' minutos)')
+                
+                log('📞 Llamando a owner()...')
+                const owner = await contract.owner()
+                log('   Owner: ' + owner)
+                
+                log('✅ ¡TODO FUNCIONA CON LA WALLET!')
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message)
+                log('Detalles: ' + error.toString())
+            }
+        }
+        
+        log('✅ Página cargada. Haz click en los botones para probar.')
+    </script>
+</body>
+</html>

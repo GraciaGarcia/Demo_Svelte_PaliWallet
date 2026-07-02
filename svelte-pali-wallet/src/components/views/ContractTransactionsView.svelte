@@ -1,7 +1,6 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte'
   import { ethers } from 'ethers'
-  import { saveTransactionToNeon } from '../../lib/api/neon'
 
   export let chainId = ''
   export let currentNetwork = ''
@@ -110,44 +109,12 @@
 
       // Ordenar por timestamp descendente
       contractTransactions = allTxs.sort((a, b) => b.timestamp - a.timestamp)
-      
-      // Guardar en Neon PostgreSQL
-      await saveTransactionsToNeon(allTxs)
     } catch (err) {
       console.error('Error cargando transacciones del contrato:', err)
       error = err instanceof Error ? err.message : String(err)
     } finally {
       loading = false
     }
-  }
-
-  async function saveTransactionsToNeon(transactions) {
-    console.log(`💾 Guardando ${transactions.length} transacciones en Neon PostgreSQL...`)
-    
-    for (const tx of transactions) {
-      try {
-        const saved = await saveTransactionToNeon({
-          hash: tx.hash,
-          from_address: tx.from,
-          to_address: tx.to,
-          value: tx.amount,
-          network: currentNetwork,
-          chain_id: chainId,
-          wallet_address: address.toLowerCase(),
-          status: 'success',
-          block_number: tx.blockNumber,
-          explorer_url: `https://sepolia.etherscan.io/tx/${tx.hash}`
-        })
-        
-        if (!saved) {
-          console.warn('⚠️ No se guardó:', tx.hash)
-        }
-      } catch (err) {
-        console.error('❌ Error guardando:', tx.hash, err)
-      }
-    }
-    
-    console.log('✅ Proceso de guardado completado')
   }
 
   function formatDate(timestamp) {

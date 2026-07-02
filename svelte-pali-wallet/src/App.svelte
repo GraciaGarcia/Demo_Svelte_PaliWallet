@@ -38,6 +38,8 @@
   import BenefitsView from './components/views/BenefitsView.svelte'
   import FeaturesView from './components/views/FeaturesView.svelte'
   import DeveloperView from './components/views/DeveloperView.svelte'
+  import BalanceCheckerView from './components/views/BalanceCheckerView.svelte'
+  import FaucetView from './components/views/FaucetViewRealContract.svelte'
   import ErrorToast from './components/ui/ErrorToast.svelte'
 
   // Detectar Pali Wallet o MetaMask
@@ -84,6 +86,7 @@
     networks.EVM.find((n) => n.chainId === chainId) || networks.UTXO.find((n) => n.chainId === chainId)
 
   function go(view) {
+    console.log('📍 App.svelte - Cambiando vista a:', view)
     currentView = view
   }
 
@@ -540,6 +543,14 @@
     {/if}
     {#if currentView === 'developer'}
       <DeveloperView {connected} on:nav={(e) => go(e.detail.view)} />
+    {/if}
+
+    {#if currentView === 'balance-checker'}
+      <BalanceCheckerView />
+    {/if}
+
+    {#if currentView === 'faucet'}
+      <FaucetView />
     {/if}
 
     <ErrorToast message={error} on:dismiss={() => (error = '')} />

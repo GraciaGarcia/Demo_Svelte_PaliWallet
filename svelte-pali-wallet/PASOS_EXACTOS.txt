@@ -1,0 +1,205 @@
+╔═══════════════════════════════════════════════════════════════════════╗
+║                  🚀 PASOS EXACTOS PARA IMPLEMENTAR                    ║
+║                      (Tiempo total: ~15 minutos)                      ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PASO 1: OBTENER ETH DE TESTNET (2 minutos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Conecta tu wallet a Sepolia Testnet
+2. Ve a: https://sepoliafaucet.com
+3. Solicita ETH (necesitas ~0.1 para desplegar + 5 para el faucet)
+4. Espera 1-2 minutos
+5. ✅ Verifica que recibiste ETH en tu wallet
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PASO 2: DESPLEGAR CONTRATO EN REMIX (5 minutos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abre: https://remix.ethereum.org
+
+2. Crear archivo:
+   - Click en "+" en el panel de archivos
+   - Nombre: PublicFaucet.sol
+   
+3. Copiar código:
+   - Abre: svelte-pali-wallet/src/lib/contracts/PublicFaucetNew.sol
+   - Selecciona TODO (Ctrl+A)
+   - Copia (Ctrl+C)
+   - Pega en Remix (Ctrl+V)
+
+4. Compilar:
+   - Click en icono de "Solidity Compiler" (izquierda)
+   - Versión: 0.8.0 o mayor
+   - Click "Compile PublicFaucet.sol"
+   - ✅ Debe decir "compilation successful"
+
+5. Desplegar:
+   - Click en icono "Deploy & Run Transactions"
+   - Environment: "Injected Provider - MetaMask" (o Pali)
+   - Asegúrate que diga "Sepolia" arriba
+   - En "_AMOUNTPERREQUEST": 100000000000000000
+   - En "_COOLDOWNTIME": 3600
+   - Click botón naranja "Deploy"
+   - Confirma en tu wallet
+   - Espera confirmación (~30 segundos)
+
+6. Guardar dirección del contrato:
+   - En "Deployed Contracts" verás: PUBLICFAUCET AT 0x...
+   - COPIA ESA DIRECCIÓN 0x... ← ¡IMPORTANTE!
+   - Pégala en un archivo de texto por ahora
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PASO 3: FONDEAR EL CONTRATO (2 minutos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Todavía en Remix:
+
+1. En "Deployed Contracts", expande tu contrato
+2. Encuentra la función "deposit" (tiene un campo rojo al lado)
+3. En el campo "VALUE": 5000000000000000000
+   (esto es 5 ETH)
+4. Click botón rojo "deposit"
+5. Confirma en tu wallet
+6. Espera confirmación
+
+7. Verificar:
+   - Click en botón azul "getBalance"
+   - Debe mostrar: uint256: 5000000000000000000
+   - ✅ ¡Perfecto!
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PASO 4: ACTUALIZAR CONFIGURACIÓN EN LA DAPP (2 minutos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abre tu editor de código (VS Code)
+
+2. Abre el archivo:
+   svelte-pali-wallet/src/lib/contracts/faucetConfig.ts
+
+3. Encuentra esta línea (línea ~19):
+   address: '0x0000000000000000000000000000000000000000',
+
+4. Reemplázala con tu dirección del contrato:
+   address: '0xTU_DIRECCION_QUE_COPIASTE_EN_PASO_2',
+
+5. Guarda el archivo (Ctrl+S)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PASO 5: ACTUALIZAR APP.SVELTE (1 minuto)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abre el archivo:
+   svelte-pali-wallet/src/App.svelte
+
+2. Encuentra la línea (cerca de línea 28):
+   import FaucetView from './components/views/FaucetView.svelte'
+
+3. Reemplázala con:
+   import FaucetView from './components/views/FaucetViewRealContract.svelte'
+
+4. Guarda el archivo (Ctrl+S)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PASO 6: INICIAR Y PROBAR (3 minutos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abrir terminal en la carpeta del proyecto
+
+2. Ejecutar:
+   cd svelte-pali-wallet
+   npm run dev
+
+3. Abre el navegador en: http://localhost:5173
+
+4. Ve a la sección "Faucet"
+
+5. Verificar que muestre:
+   ✅ Balance del Faucet: 5.0000 ETH
+   ✅ Cantidad por solicitud: 0.1000 ETH
+   ✅ Dirección del contrato: 0x...
+
+6. Probar solicitar tokens:
+   - Pega cualquier dirección (puede ser la tuya)
+   - Click "Solicitar tokens"
+   - Espera ~30 segundos
+   - ✅ Debe aparecer mensaje de éxito
+   - ✅ Debe aparecer en el historial
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ VERIFICACIÓN FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Checklist:
+
+□ Contrato desplegado en Sepolia
+□ Contrato tiene balance (5 ETH)
+□ Dirección actualizada en faucetConfig.ts
+□ App.svelte importa FaucetViewRealContract
+□ npm run dev funciona sin errores
+□ Puedo ver la info del contrato en la dApp
+□ Puedo solicitar tokens
+□ Los tokens llegan a la dirección
+□ El historial muestra transacciones reales
+□ Los links al explorer (Ver TX) funcionan
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ¿TODO FUNCIONÓ? 🎉
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+¡Felicidades! Ahora tienes:
+
+✅ Faucet con smart contract real
+✅ Transacciones verificables en blockchain
+✅ Historial desde Etherscan
+✅ Gestión de fondos (deposit/withdraw)
+✅ Cooldown funcional
+✅ Listo para desplegar en producción
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PRÓXIMOS PASOS OPCIONALES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Obtener API key de Etherscan (opcional pero recomendado):
+   https://etherscan.io/apis
+   
+2. Agregar más redes (Mumbai, BSC Testnet):
+   - Desplegar el contrato en esas redes
+   - Actualizar faucetConfig.ts
+   - Descomentar opciones en el selector
+
+3. Desplegar a producción:
+   npm run build
+   vercel deploy
+   
+4. Verificar el contrato en Etherscan:
+   https://sepolia.etherscan.io (búsca tu contrato)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DOCUMENTACIÓN ADICIONAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Lee estos archivos para más información:
+
+📖 FAUCET_DEPLOYMENT_GUIDE.md  → Guía detallada paso a paso
+📖 RESUMEN_FAUCET.md           → Resumen ejecutivo de la implementación
+📖 COMANDOS_RAPIDOS_FAUCET.md  → Comandos útiles
+📖 EJEMPLO_VISUAL_FAUCET.md    → Cómo se verá tu faucet
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+¿Necesitas ayuda? Revisa la sección de troubleshooting en:
+FAUCET_DEPLOYMENT_GUIDE.md
+
+¡Éxito! 🚀

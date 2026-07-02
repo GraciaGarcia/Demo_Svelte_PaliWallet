@@ -7,6 +7,7 @@
   const dispatch = createEventDispatcher()
 
   function go(view) {
+    console.log('🔘 Navegando a:', view)
     dispatch('navigate', { view })
   }
 </script>
@@ -90,6 +91,32 @@
   >
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <polyline points="20 6 9 17 4 12" />
+    </svg>
+  </button>
+
+  <button
+    type="button"
+    class="menu-icon"
+    class:active={currentView === 'balance-checker'}
+    on:click={() => go('balance-checker')}
+    title="Consultar Saldo"
+  >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  </button>
+
+  <button
+    type="button"
+    class="menu-icon"
+    class:active={currentView === 'faucet'}
+    on:click={() => go('faucet')}
+    title="Faucet Público"
+  >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
+      <rect x="3" y="19" width="18" height="2" />
     </svg>
   </button>
 
