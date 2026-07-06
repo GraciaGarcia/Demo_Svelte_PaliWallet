@@ -604,57 +604,37 @@
       
       {#if loadingHistory}
         <p class="loading-text">Cargando historial...</p>
-      {:else}
-        <!-- Enlace principal al explorador del contrato -->
-        <div class="explorer-main-link">
-          <p class="explorer-description">
-            Para ver <strong>todas las transacciones reales</strong> del contrato, incluyendo depósitos, retiros y transferencias:
-          </p>
-          <a 
-            href="{config.explorerUrl}/address/{config.address}#events"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="explorer-button-main"
-          >
-            🔍 Ver Historial Completo en {config.networkName === 'Sepolia' ? 'Etherscan' : 'Explorer'} ↗
-          </a>
-          <p class="explorer-hint-main">
-            <strong>Tip:</strong> En el explorador puedes filtrar por eventos específicos (Transfer, Deposit, etc.)
-          </p>
-        </div>
-
-        {#if history.length > 0}
-          <!-- Mostrar transacciones recientes con enlaces reales -->
-          <div class="history-list">
-            {#each history as entry}
-              <div class="history-item">
-                <div class="history-icon">🚰</div>
-                <div class="history-info">
-                  <p class="history-recipient">
-                    <strong>Para:</strong> {shortAddress(entry.recipient)}
-                  </p>
-                  <p class="history-amount">
-                    <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
-                  </p>
-                  <p class="history-date">
-                    {formatDate(entry.timestamp)}
-                  </p>
-                </div>
-                <div class="history-right">
-                  <a 
-                    href="{config.explorerUrl}/address/{config.address}#events" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="history-link"
-                  >
-                    Ver en Explorer ↗
-                  </a>
-                  <p class="history-block">Block: {entry.blockNumber}</p>
-                </div>
+      {:else if history.length > 0}
+        <!-- Solo mostrar las transacciones con enlaces reales -->
+        <div class="history-list">
+          {#each history as entry}
+            <div class="history-item">
+              <div class="history-icon">🚰</div>
+              <div class="history-info">
+                <p class="history-recipient">
+                  <strong>Para:</strong> {shortAddress(entry.recipient)}
+                </p>
+                <p class="history-amount">
+                  <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
+                </p>
+                <p class="history-date">
+                  {formatDate(entry.timestamp)}
+                </p>
               </div>
-            {/each}
-          </div>
-        {/if}
+              <div class="history-right">
+                <a 
+                  href="{config.explorerUrl}/address/{config.address}#events" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="history-link"
+                >
+                  Ver en Explorer ↗
+                </a>
+                <p class="history-block">Block: {entry.blockNumber}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
       {/if}
     </div>
   {/if}
