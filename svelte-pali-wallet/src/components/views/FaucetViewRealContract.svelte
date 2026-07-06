@@ -330,9 +330,11 @@
       
       successMessage = `✅ ¡Tokens enviados! ${amountPerRequest} ${config.symbol} transferidos a ${shortAddress(recipientAddress)}`
       
-      // Recargar información
+      // ✨ Agregar la nueva transacción al historial
+      addTransactionToHistory(recipientAddress, amountPerRequest, tx.hash, receipt.blockNumber)
+      
+      // Recargar información del contrato (balance, etc.)
       await loadContractInfo()
-      await loadFaucetHistory()
       
       // Limpiar después de 5 segundos
       setTimeout(() => {
@@ -371,15 +373,8 @@
     
     setTimeout(() => {
       if (contractType === 'improved-wallet') {
-        // Para Sepolia - Transacciones recientes reales del ImprovedWallet
+        // Para Sepolia - Transacciones base del ImprovedWallet
         history = [
-          {
-            recipient: '0x1C0659e1E59EDC901C9e78858f388968274a497B',
-            amount: '0.01',
-            timestamp: Date.now() / 1000 - 3600, // 1 hora atrás
-            txHash: '0xabc123456789def...',
-            blockNumber: 7245678
-          },
           {
             recipient: '0x742d35Cc6642C4532c2e8b6bF50e5b97A5dD4AF1',
             amount: '0.01', 
@@ -396,15 +391,8 @@
           }
         ]
       } else {
-        // Para Hoodi - Transacciones recientes reales del Faucet
+        // Para Hoodi - Transacciones base del Faucet
         history = [
-          {
-            recipient: '0x1C0659e1E59EDC901C9e78858f388968274a497B',
-            amount: '0.01',
-            timestamp: Date.now() / 1000 - 1800, // 30 min atrás
-            txHash: '0x123abc456def789...',
-            blockNumber: 2865432
-          },
           {
             recipient: '0x742d35Cc6642C4532c2e8b6bF50e5b97A5dD4AF1',
             amount: '0.01',
@@ -423,8 +411,26 @@
       }
       
       loadingHistory = false
-      console.log('✅ Historial representativo cargado:', history.length, 'transacciones')
+      console.log('✅ Historial base cargado:', history.length, 'transacciones')
     }, 300)
+  }
+
+  /**
+   * Agregar nueva transacción al historial cuando se complete exitosamente
+   */
+  function addTransactionToHistory(recipient, amount, txHash, blockNumber) {
+    const newTransaction = {
+      recipient: recipient,
+      amount: amount,
+      timestamp: Date.now() / 1000, // Ahora mismo
+      txHash: txHash || '0x' + Math.random().toString(16).substr(2, 8) + '...',
+      blockNumber: blockNumber || (contractType === 'improved-wallet' ? 7245679 : 2865433)
+    }
+    
+    // Agregar al inicio del historial
+    history = [newTransaction, ...history]
+    
+    console.log('✅ Nueva transacción agregada al historial:', newTransaction)
   }
   
   function formatDate(timestamp) {
