@@ -388,9 +388,9 @@
         const owner = await faucetContract.owner()
         console.log('👤 Owner del contrato:', owner)
         
-        // Obtener eventos Transfer donde from = owner
+        // Obtener eventos Transfer donde from = owner (DESDE EL INICIO, bloque 0)
         const filter = faucetContract.filters.Transfer(owner, null)
-        const events = await faucetContract.queryFilter(filter, -10000, 'latest') // Últimos ~10k bloques
+        const events = await faucetContract.queryFilter(filter, 0, 'latest')
         
         console.log(`✅ Encontrados ${events.length} eventos Transfer del owner`)
         
@@ -421,6 +421,7 @@
           
           console.log('✅ Historial cargado:', history.length, 'transacciones')
         } else {
+          console.log('⚠️ No se encontraron eventos Transfer del owner')
           history = []
         }
       } else {
