@@ -372,8 +372,20 @@
     loadingHistory = true
     
     try {
-      console.log('📡 Usando JsonRpcProvider')
-      const provider = new ethers.JsonRpcProvider(config.rpcUrl)
+      // Intentar obtener eventos directamente del contrato usando el provider
+      console.log('📡 Conectando al provider para obtener eventos...')
+      
+      // @ts-ignore
+      const ethereum = window.ethereum || window.pali
+      let provider
+      
+      if (ethereum) {
+        console.log('✅ Usando provider del navegador')
+        provider = new ethers.BrowserProvider(ethereum)
+      } else {
+        console.log('⚠️ Usando JsonRpcProvider')
+        provider = new ethers.JsonRpcProvider(config.rpcUrl)
+      }
       
       const faucetContract = new ethers.Contract(
         config.address,
