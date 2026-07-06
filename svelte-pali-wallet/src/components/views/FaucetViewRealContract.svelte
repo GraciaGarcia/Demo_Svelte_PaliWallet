@@ -652,64 +652,90 @@
     <!-- HISTORIAL DESDE BLOCKCHAIN -->
     <div class="history-section">
       <div class="history-header">
-        <h2>📜 Historial de Transacciones (Blockchain)</h2>
-        <button
-          type="button"
-          class="btn-refresh"
-          on:click={loadFaucetHistory}
-          disabled={loadingHistory}
-        >
-          {#if loadingHistory}
-            <span class="spinner-small"></span>
-          {:else}
-            🔄
-          {/if}
-          Actualizar
-        </button>
+        <h2>📜 Historial de Transacciones</h2>
+        {#if contractType === 'improved-wallet'}
+          <a 
+            href="{config.explorerUrl}/address/{config.address}#internaltx"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-refresh"
+          >
+            Ver en Etherscan ↗
+          </a>
+        {:else}
+          <button
+            type="button"
+            class="btn-refresh"
+            on:click={loadFaucetHistory}
+            disabled={loadingHistory}
+          >
+            {#if loadingHistory}
+              <span class="spinner-small"></span>
+            {:else}
+              🔄
+            {/if}
+            Actualizar
+          </button>
+        {/if}
       </div>
       
-      {#if loadingHistory}
-        <p class="loading-text">Cargando historial desde blockchain...</p>
-      {:else if history.length === 0}
-        <p class="empty-text">
-          {#if contractType === 'improved-wallet'}
-            No hay transacciones del faucet registradas aún en Sepolia.
-            <br><br>
-            💡 El historial mostrará las transferencias realizadas desde el contrato usando la función sendTo().
-          {:else}
-            No hay transacciones registradas aún en Hoodi.
-          {/if}
-        </p>
-      {:else}
-        <div class="history-list">
-          {#each history as entry}
-            <div class="history-item">
-              <div class="history-icon">🚰</div>
-              <div class="history-info">
-                <p class="history-recipient">
-                  <strong>Para:</strong> {shortAddress(entry.recipient)}
-                </p>
-                <p class="history-amount">
-                  <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
-                </p>
-                <p class="history-date">
-                  {formatDate(entry.timestamp)}
-                </p>
-              </div>
-              <div class="history-right">
-                <a 
-                  href="{config.explorerUrl}/tx/{entry.txHash}" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  class="history-link"
-                >
-                  Ver TX ↗
-                </a>
-                <p class="history-block">Block: {entry.blockNumber}</p>
-              </div>
-            </div>
-          {/each}
+      {#if contractType === 'improved-wallet'}
+        <!-- Para Sepolia: Solo mostrar enlace al explorer -->
+        <div class="explorer-link-card">
+          <p class="explorer-text">
+            💡 El historial completo de transacciones está disponible en Etherscan:
+          </p>
+          <a 
+            href="{config.explorerUrl}/address/{config.address}#events"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="explorer-button"
+          >
+            🔍 Ver Historial Completo en Etherscan
+          </a>
+          <p class="explorer-hint">
+            Busca eventos <strong>"Transfer"</strong> para ver las distribuciones del faucet
+          </p>
         </div>
+      {:else}
+        <!-- Para Hoodi: Mostrar historial normal -->
+        {#if loadingHistory}
+          <p class="loading-text">Cargando historial desde blockchain...</p>
+        {:else if history.length === 0}
+          <p class="empty-text">
+            No hay transacciones registradas aún en Hoodi.
+          </p>
+        {:else}
+          <div class="history-list">
+            {#each history as entry}
+              <div class="history-item">
+                <div class="history-icon">🚰</div>
+                <div class="history-info">
+                  <p class="history-recipient">
+                    <strong>Para:</strong> {shortAddress(entry.recipient)}
+                  </p>
+                  <p class="history-amount">
+                    <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
+                  </p>
+                  <p class="history-date">
+                    {formatDate(entry.timestamp)}
+                  </p>
+                </div>
+                <div class="history-right">
+                  <a 
+                    href="{config.explorerUrl}/tx/{entry.txHash}" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="history-link"
+                  >
+                    Ver TX ↗
+                  </a>
+                  <p class="history-block">Block: {entry.blockNumber}</p>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
       {/if}
     </div>
   {/if}
@@ -1139,6 +1165,48 @@
     font-size: 0.75rem;
     color: #6b7280;
     margin: 0;
+  }
+
+  .explorer-link-card {
+    background: rgba(17, 24, 39, 0.6);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .explorer-text {
+    font-size: 0.95rem;
+    color: #9ca3af;
+    margin-bottom: 1.5rem;
+  }
+
+  .explorer-button {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #e879f9 0%, #a855f7 50%, #ec4899 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+  }
+
+  .explorer-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(168, 85, 247, 0.6);
+  }
+
+  .explorer-hint {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 1rem;
+  }
+
+  .explorer-hint strong {
+    color: #e879f9;
   }
 
   .info-section {
