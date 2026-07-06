@@ -37,7 +37,7 @@ export const FAUCET_CONTRACTS: Record<string, FaucetConfig> = {
   // Sepolia Testnet (Ethereum) - ✅ Usando ImprovedWalletContract
   '11155111': {
     address: '0x1fC9203ECC40dFC072bd4b087FE70004A1D2340F', // ✅ ImprovedWalletContract
-    explorerApi: 'https://api-sepolia.etherscan.io/api',
+    explorerApi: 'https://api-sepolia.etherscan.io/v2/api', // API V2 (actualizado)
     explorerUrl: 'https://sepolia.etherscan.io',
     rpcUrl: 'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', // RPC público de Infura
     networkName: 'Sepolia',
