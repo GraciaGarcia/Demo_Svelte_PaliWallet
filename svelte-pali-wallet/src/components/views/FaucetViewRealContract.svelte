@@ -362,64 +362,18 @@
    * Cargar historial desde el explorer o directamente del contrato
    */
   /**
-   * Mostrar historial estático con enlace directo al explorador
-   * Mucho más simple y confiable que consultar eventos
+   * Historial simplificado - solo mostrar enlace al explorador
    */
   function loadFaucetHistory() {
-    console.log('📜 Cargando historial estático...')
-    
+    console.log('📜 Historial: enlace directo al explorador')
     loadingHistory = true
     
-    // Simular algunas transacciones de ejemplo para mostrar el formato
+    // Solo simular un pequeño loading y listo
     setTimeout(() => {
-      if (contractType === 'improved-wallet') {
-        // Para Sepolia - Transacciones de ejemplo del ImprovedWallet
-        history = [
-          {
-            recipient: '0x1C0659e1E59EDC901C9e78858f388968274a497B',
-            amount: '0.01',
-            timestamp: Date.now() / 1000 - 3600, // 1 hora atrás
-            txHash: '0xabc123456789...',
-            blockNumber: 12345678
-          },
-          {
-            recipient: '0x742d35Cc6642C4532c2e8b6bF50e5b97A5dD4AF1',
-            amount: '0.01', 
-            timestamp: Date.now() / 1000 - 7200, // 2 horas atrás
-            txHash: '0xdef456789abc...',
-            blockNumber: 12345677
-          },
-          {
-            recipient: '0x8ba1f109551bD432803012645Hac136c62345678',
-            amount: '0.01',
-            timestamp: Date.now() / 1000 - 14400, // 4 horas atrás
-            txHash: '0x789xyz123abc...',
-            blockNumber: 12345676
-          }
-        ]
-      } else {
-        // Para Hoodi - Transacciones de ejemplo del Faucet
-        history = [
-          {
-            recipient: '0x1C0659e1E59EDC901C9e78858f388968274a497B',
-            amount: '0.01',
-            timestamp: Date.now() / 1000 - 1800, // 30 min atrás
-            txHash: '0x123abc456def...',
-            blockNumber: 8765432
-          },
-          {
-            recipient: '0x742d35Cc6642C4532c2e8b6bF50e5b97A5dD4AF1',
-            amount: '0.01',
-            timestamp: Date.now() / 1000 - 5400, // 1.5 horas atrás
-            txHash: '0x456def789xyz...',
-            blockNumber: 8765431
-          }
-        ]
-      }
-      
+      history = [] // Sin transacciones de ejemplo
       loadingHistory = false
-      console.log('✅ Historial estático cargado:', history.length, 'transacciones de ejemplo')
-    }, 500) // Simular un pequeño delay de carga
+      console.log('✅ Listo - solo enlace al explorador')
+    }, 300)
   }
   
   function formatDate(timestamp) {
@@ -617,47 +571,6 @@
             <strong>Tip:</strong> En el explorador puedes filtrar por eventos específicos (Transfer, Deposit, etc.)
           </p>
         </div>
-
-        {#if history.length === 0}
-          <p class="empty-text">
-            Transacciones de ejemplo del faucet mostradas arriba.
-            <br>El historial real está disponible en el explorador.
-          </p>
-        {:else}
-          <!-- Mostrar algunas transacciones de ejemplo -->
-          <div class="example-note">
-            <p><strong>📋 Transacciones de Ejemplo:</strong> (El historial real está en el explorador arriba)</p>
-          </div>
-          <div class="history-list">
-            {#each history as entry}
-              <div class="history-item">
-                <div class="history-icon">🚰</div>
-                <div class="history-info">
-                  <p class="history-recipient">
-                    <strong>Para:</strong> {shortAddress(entry.recipient)}
-                  </p>
-                  <p class="history-amount">
-                    <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
-                  </p>
-                  <p class="history-date">
-                    {formatDate(entry.timestamp)}
-                  </p>
-                </div>
-                <div class="history-right">
-                  <a 
-                    href="{config.explorerUrl}/address/{config.address}#events" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="history-link"
-                  >
-                    Ver en Explorer ↗
-                  </a>
-                  <p class="history-block">Ejemplo</p>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
       {/if}
     </div>
   {/if}
