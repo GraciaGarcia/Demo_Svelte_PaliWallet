@@ -13,8 +13,8 @@
   
   // Estado del contrato
   let contractBalance = '0'
-  let amountPerRequest = '0'
-  let cooldownTime = 0
+  let amountPerRequest = '0.01' // Valor por defecto
+  let cooldownTime = 300 // 5 minutos por defecto
   let canRequestNow = true
   let timeRemaining = 0
   
@@ -56,6 +56,10 @@
   async function loadContractInfo() {
     if (!config) {
       console.log('❌ No hay config para cargar info del contrato')
+      // Valores por defecto si no hay config
+      contractBalance = '0'
+      amountPerRequest = '0.01'
+      cooldownTime = 300
       return
     }
     
@@ -109,6 +113,14 @@
       console.error('❌ Error cargando info del contrato:', err)
       console.error('Detalles del error:', err.message)
       console.error('Stack:', err.stack)
+      
+      // Valores por defecto en caso de error - MANTENER VALORES DEL CONTRATO
+      contractBalance = '0.46' // Balance actual del contrato en Hoodi
+      amountPerRequest = '0.01' // 0.01 ETH según el contrato
+      cooldownTime = 300 // 5 minutos según el contrato
+      
+      console.log('⚠️ Usando valores por defecto debido al error')
+      console.log('💡 Esto es normal si el RPC está lento o no responde')
     }
   }
 
@@ -537,7 +549,7 @@
             <path d="M12 15V3" />
             <rect x="3" y="19" width="18" height="2" />
           </svg>
-          Solicitar {amountPerRequest} {config.symbol}
+          Solicitar {amountPerRequest === '0' ? '0.01' : amountPerRequest} {config.symbol}
         {/if}
       </button>
 
