@@ -559,7 +559,7 @@
 <div class="faucet-view">
   <div class="view-header">
     <h1 class="view-title">🚰 Faucet Público con Smart Contract</h1>
-    <p class="view-subtitle">Recibe tokens de prueba de contratos reales - Solo conecta tu wallet para firmar</p>
+    <p class="view-subtitle">Recibe tokens de prueba - Hoodi y Sepolia disponibles ✨</p>
   </div>
 
   <!-- Selector de Red -->
