@@ -372,89 +372,59 @@
     loadingHistory = true
     
     try {
+      console.log('📡 Usando JsonRpcProvider')
+      const provider = new ethers.JsonRpcProvider(config.rpcUrl)
+      
+      const faucetContract = new ethers.Contract(
+        config.address,
+        currentABI,
+        provider
+      )
+      
+      console.log('🔍 Buscando eventos...')
+      
       if (contractType === 'improved-wallet') {
-        // Para Sepolia ImprovedWallet: Obtener eventos Transfer desde Etherscan
-        console.log('🔍 Obteniendo eventos Transfer de Etherscan...')
+        // Para ImprovedWalletContract: Obtener el owner y filtrar eventos Transfer
+        const owner = await faucetContract.owner()
+        console.log('👤 Owner del contrato:', owner)
         
-        // Usar la API de Etherscan para obtener las transacciones internas
-        const url = `${config.explorerApi}?module=account&action=txlist&address=${config.address}&startblock=0&endblock=99999999&sort=desc&apikey=${config.apiKey || ''}`
+        // Obtener eventos Transfer donde from = owner
+        const filter = faucetContract.filters.Transfer(owner, null)
+        const events = await faucetContract.queryFilter(filter, -10000, 'latest') // Últimos ~10k bloques
         
-        console.log('📡 URL Etherscan:', url)
+        console.log(`✅ Encontrados ${events.length} eventos Transfer del owner`)
         
-        const response = await fetch(url)
-        const data = await response.json()
-        
-        console.log('📊 Respuesta de Etherscan:', data)
-        
-        if (data.status === '1' && data.result && Array.isArray(data.result)) {
-          // Obtener detalles de cada transacción para encontrar eventos Transfer
-          const provider = new ethers.JsonRpcProvider(config.rpcUrl)
-          const faucetContract = new ethers.Contract(config.address, currentABI, provider)
-          const owner = await faucetContract.owner()
-          
-          console.log('👤 Owner del contrato:', owner)
-          
-          // Filtrar y procesar transacciones
-          const transferPromises = data.result
-            .filter(tx => tx.to && tx.to.toLowerCase() === config.address.toLowerCase())
-            .slice(0, 50) // Limitar a últimas 50 para no sobrecargar
-            .map(async (tx) => {
+        if (events.length > 0) {
+          history = await Promise.all(
+            events.map(async (event) => {
               try {
-                const receipt = await provider.getTransactionReceipt(tx.hash)
-                if (!receipt || !receipt.logs) return null
-                
-                // Buscar eventos Transfer en los logs
-                const transferEvents = receipt.logs
-                  .map(log => {
-                    try {
-                      const parsed = faucetContract.interface.parseLog({
-                        topics: log.topics,
-                        data: log.data
-                      })
-                      
-                      // Solo eventos Transfer donde from = owner
-                      if (parsed && parsed.name === 'Transfer' && 
-                          parsed.args[0].toLowerCase() === owner.toLowerCase()) {
-                        return {
-                          recipient: parsed.args[1],
-                          amount: ethers.formatEther(parsed.args[2]),
-                          timestamp: Number(parsed.args[3]),
-                          txHash: tx.hash,
-                          blockNumber: parseInt(tx.blockNumber)
-                        }
-                      }
-                    } catch (e) {
-                      return null
-                    }
-                    return null
-                  })
-                  .filter(e => e !== null)
-                
-                return transferEvents[0] // Primera transferencia del owner en esta TX
+                const block = await event.getBlock()
+                return {
+                  recipient: event.args[1], // to
+                  amount: ethers.formatEther(event.args[2]),
+                  timestamp: Number(event.args[3]),
+                  txHash: event.transactionHash,
+                  blockNumber: event.blockNumber,
+                  blockTime: block.timestamp
+                }
               } catch (err) {
-                console.error('Error procesando TX:', tx.hash, err)
+                console.error('Error procesando evento:', err)
                 return null
               }
             })
+          )
           
-          const transfers = await Promise.all(transferPromises)
-          history = transfers
-            .filter(t => t !== null)
+          history = history
+            .filter(h => h !== null)
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, 20)
           
-          console.log('✅ Historial cargado:', history.length, 'distribuciones del faucet')
-          console.log('📋 Historial:', history)
+          console.log('✅ Historial cargado:', history.length, 'transacciones')
         } else {
-          console.log('⚠️ Etherscan no devolvió resultados:', data.message || data)
           history = []
         }
       } else {
-        // Para Hoodi: Usar el método directo del RPC
-        console.log('📡 Usando RPC directo para Hoodi...')
-        const provider = new ethers.JsonRpcProvider(config.rpcUrl)
-        const faucetContract = new ethers.Contract(config.address, currentABI, provider)
-        
+        // Para contrato Faucet (Hoodi)
         const filter = faucetContract.filters.FaucetSent()
         const events = await faucetContract.queryFilter(filter, 0, 'latest')
         
@@ -653,89 +623,68 @@
     <div class="history-section">
       <div class="history-header">
         <h2>📜 Historial de Transacciones</h2>
-        {#if contractType === 'improved-wallet'}
-          <a 
-            href="{config.explorerUrl}/address/{config.address}#internaltx"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-refresh"
-          >
-            Ver en Etherscan ↗
-          </a>
-        {:else}
-          <button
-            type="button"
-            class="btn-refresh"
-            on:click={loadFaucetHistory}
-            disabled={loadingHistory}
-          >
-            {#if loadingHistory}
-              <span class="spinner-small"></span>
-            {:else}
-              🔄
-            {/if}
-            Actualizar
-          </button>
-        {/if}
+        <button
+          type="button"
+          class="btn-refresh"
+          on:click={loadFaucetHistory}
+          disabled={loadingHistory}
+        >
+          {#if loadingHistory}
+            <span class="spinner-small"></span>
+          {:else}
+            🔄
+          {/if}
+          Actualizar
+        </button>
       </div>
       
-      {#if contractType === 'improved-wallet'}
-        <!-- Para Sepolia: Solo mostrar enlace al explorer -->
-        <div class="explorer-link-card">
-          <p class="explorer-text">
-            💡 El historial completo de transacciones está disponible en Etherscan:
-          </p>
-          <a 
-            href="{config.explorerUrl}/address/{config.address}#events"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="explorer-button"
-          >
-            🔍 Ver Historial Completo en Etherscan
-          </a>
-          <p class="explorer-hint">
-            Busca eventos <strong>"Transfer"</strong> para ver las distribuciones del faucet
-          </p>
-        </div>
+      {#if loadingHistory}
+        <p class="loading-text">Cargando historial desde blockchain...</p>
+      {:else if history.length === 0}
+        <p class="empty-text">
+          No hay transacciones del faucet registradas aún.
+          {#if contractType === 'improved-wallet'}
+            <br><br>
+            <a 
+              href="{config.explorerUrl}/address/{config.address}#events"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="explorer-link-inline"
+            >
+              Ver en Etherscan ↗
+            </a>
+          {/if}
+        </p>
       {:else}
-        <!-- Para Hoodi: Mostrar historial normal -->
-        {#if loadingHistory}
-          <p class="loading-text">Cargando historial desde blockchain...</p>
-        {:else if history.length === 0}
-          <p class="empty-text">
-            No hay transacciones registradas aún en Hoodi.
-          </p>
-        {:else}
-          <div class="history-list">
-            {#each history as entry}
-              <div class="history-item">
-                <div class="history-icon">🚰</div>
-                <div class="history-info">
-                  <p class="history-recipient">
-                    <strong>Para:</strong> {shortAddress(entry.recipient)}
-                  </p>
-                  <p class="history-amount">
-                    <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
-                  </p>
-                  <p class="history-date">
-                    {formatDate(entry.timestamp)}
-                  </p>
-                </div>
-                <div class="history-right">
-                  <a 
-                    href="{config.explorerUrl}/tx/{entry.txHash}" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="history-link"
-                  >
-                    Ver TX ↗
-                  </a>
-                  <p class="history-block">Block: {entry.blockNumber}</p>
-                </div>
+        <div class="history-list">
+          {#each history as entry}
+            <div class="history-item">
+              <div class="history-icon">🚰</div>
+              <div class="history-info">
+                <p class="history-recipient">
+                  <strong>Para:</strong> {shortAddress(entry.recipient)}
+                </p>
+                <p class="history-amount">
+                  <strong>Cantidad:</strong> {parseFloat(entry.amount).toFixed(4)} {config.symbol}
+                </p>
+                <p class="history-date">
+                  {formatDate(entry.timestamp)}
+                </p>
               </div>
-            {/each}
-          </div>
-        {/if}
+              <div class="history-right">
+                <a 
+                  href="{config.explorerUrl}/tx/{entry.txHash}" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="history-link"
+                >
+                  Ver TX ↗
+                </a>
+                <p class="history-block">Block: {entry.blockNumber}</p>
+              </div>
+            </div>
+          {/each}
+        </div>
       {/if}
     </div>
   {/if}
@@ -1206,6 +1155,16 @@
   }
 
   .explorer-hint strong {
+    color: #e879f9;
+  }
+
+  .explorer-link-inline {
+    color: #a855f7;
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  .explorer-link-inline:hover {
     color: #e879f9;
   }
 
