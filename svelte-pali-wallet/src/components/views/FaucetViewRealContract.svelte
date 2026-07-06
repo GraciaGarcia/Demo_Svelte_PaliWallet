@@ -384,44 +384,33 @@
       console.log('🔍 Buscando eventos...')
       
       if (contractType === 'improved-wallet') {
-        // Para ImprovedWalletContract: Obtener el owner y filtrar eventos Transfer
-        const owner = await faucetContract.owner()
-        console.log('👤 Owner del contrato:', owner)
-        
-        // Obtener eventos Transfer donde from = owner (DESDE EL INICIO, bloque 0)
-        const filter = faucetContract.filters.Transfer(owner, null)
+        // Para ImprovedWalletContract: IGUAL QUE HOODI, sin complicaciones
+        const filter = faucetContract.filters.Transfer()
         const events = await faucetContract.queryFilter(filter, 0, 'latest')
         
-        console.log(`✅ Encontrados ${events.length} eventos Transfer del owner`)
+        console.log(`✅ Encontrados ${events.length} eventos Transfer`)
         
         if (events.length > 0) {
           history = await Promise.all(
             events.map(async (event) => {
-              try {
-                const block = await event.getBlock()
-                return {
-                  recipient: event.args[1], // to
-                  amount: ethers.formatEther(event.args[2]),
-                  timestamp: Number(event.args[3]),
-                  txHash: event.transactionHash,
-                  blockNumber: event.blockNumber,
-                  blockTime: block.timestamp
-                }
-              } catch (err) {
-                console.error('Error procesando evento:', err)
-                return null
+              const block = await event.getBlock()
+              return {
+                recipient: event.args[1], // to
+                amount: ethers.formatEther(event.args[2]),
+                timestamp: Number(event.args[3]),
+                txHash: event.transactionHash,
+                blockNumber: event.blockNumber,
+                blockTime: block.timestamp
               }
             })
           )
           
           history = history
-            .filter(h => h !== null)
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, 20)
           
           console.log('✅ Historial cargado:', history.length, 'transacciones')
         } else {
-          console.log('⚠️ No se encontraron eventos Transfer del owner')
           history = []
         }
       } else {
