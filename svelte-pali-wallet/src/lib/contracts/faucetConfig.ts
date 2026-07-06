@@ -24,9 +24,9 @@ export const FAUCET_CONTRACTS: Record<string, FaucetConfig> = {
     address: '0x811278B0518bCE88a87de7f8E82c1Ac16649E6ac', // ✅ Desplegado
     explorerApi: 'https://hoodi.etherscan.io/api',
     explorerUrl: 'https://hoodi.etherscan.io',
-    rpcUrl: 'https://rpc.hoodi.fi',
-    networkName: 'Ethereum Hoodi EVM',
-    symbol: 'HOODI',
+    rpcUrl: 'https://rpc.hoodi.ethpandaops.io', // RPC principal de EVM wallet networks
+    networkName: 'Ethereum Hoodi',
+    symbol: 'ETH', // Hoodi usa ETH como símbolo
     chainId: '560048',
     apiKey: '',
     contractType: 'faucet',
