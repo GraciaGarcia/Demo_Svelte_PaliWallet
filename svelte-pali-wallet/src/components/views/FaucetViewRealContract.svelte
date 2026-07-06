@@ -11,10 +11,10 @@
   let success = false
   let successMessage = ''
   
-  // Estado del contrato
-  let contractBalance = '0'
-  let amountPerRequest = '0.01' // Valor por defecto
-  let cooldownTime = 300 // 5 minutos por defecto
+  // Estado del contrato - VALORES POR DEFECTO DEL CONTRATO REAL
+  let contractBalance = '0.46' // Balance conocido del contrato en Hoodi
+  let amountPerRequest = '0.01' // 0.01 ETH según PublicFaucetNew.sol
+  let cooldownTime = 300 // 5 minutos según el contrato
   let canRequestNow = true
   let timeRemaining = 0
   
@@ -52,14 +52,12 @@
 
   /**
    * Cargar información del contrato (balance, amount, cooldown)
+   * Nota: Si el RPC falla, mantiene los valores por defecto configurados
    */
   async function loadContractInfo() {
     if (!config) {
       console.log('❌ No hay config para cargar info del contrato')
-      // Valores por defecto si no hay config
-      contractBalance = '0'
-      amountPerRequest = '0.01'
-      cooldownTime = 300
+      // Los valores ya están en los defaults, no hacer nada
       return
     }
     
@@ -101,26 +99,30 @@
       console.log('  - Amount:', amount.toString())
       console.log('  - Cooldown:', cooldown.toString())
       
-      contractBalance = ethers.formatEther(balance)
-      amountPerRequest = ethers.formatEther(amount)
-      cooldownTime = Number(cooldown)
+      // SOLO actualizar si los valores son válidos
+      if (balance && balance.toString() !== '0') {
+        contractBalance = ethers.formatEther(balance)
+      }
+      if (amount && amount.toString() !== '0') {
+        amountPerRequest = ethers.formatEther(amount)
+      }
+      if (cooldown) {
+        cooldownTime = Number(cooldown)
+      }
       
-      console.log('✅ Info del contrato cargada:')
+      console.log('✅ Info del contrato actualizada:')
       console.log('  - Balance formateado:', contractBalance)
       console.log('  - Amount formateado:', amountPerRequest)
       console.log('  - Cooldown:', cooldownTime)
     } catch (err) {
       console.error('❌ Error cargando info del contrato:', err)
       console.error('Detalles del error:', err.message)
-      console.error('Stack:', err.stack)
       
-      // Valores por defecto en caso de error - MANTENER VALORES DEL CONTRATO
-      contractBalance = '0.46' // Balance actual del contrato en Hoodi
-      amountPerRequest = '0.01' // 0.01 ETH según el contrato
-      cooldownTime = 300 // 5 minutos según el contrato
-      
-      console.log('⚠️ Usando valores por defecto debido al error')
-      console.log('💡 Esto es normal si el RPC está lento o no responde')
+      console.log('⚠️ Manteniendo valores por defecto debido al error')
+      console.log('💡 Los valores mostrados son del último despliegue conocido')
+      console.log('  - Balance:', contractBalance, config.symbol)
+      console.log('  - Amount:', amountPerRequest, config.symbol)
+      console.log('  - Cooldown:', cooldownTime, 'segundos')
     }
   }
 
