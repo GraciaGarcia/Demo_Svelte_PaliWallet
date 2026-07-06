@@ -363,7 +363,13 @@
       return
     }
     
-    console.log('📜 Cargando historial del faucet...')
+    console.log('📜 === INICIANDO CARGA DE HISTORIAL ===')
+    console.log('🌐 Red:', config.networkName)
+    console.log('📍 Chain ID:', config.chainId)
+    console.log('📋 Tipo de contrato:', contractType)
+    console.log('📍 Dirección:', config.address)
+    console.log('🔗 RPC:', config.rpcUrl)
+    
     loadingHistory = true
     
     try {
@@ -413,6 +419,12 @@
             
             if (contractType === 'improved-wallet') {
               // Evento Transfer(address from, address to, uint256 amount, uint256 timestamp)
+              console.log('📦 Evento Transfer:', {
+                from: event.args[0],
+                to: event.args[1],
+                amount: ethers.formatEther(event.args[2]),
+                timestamp: Number(event.args[3])
+              })
               return {
                 recipient: event.args[1], // to
                 amount: ethers.formatEther(event.args[2]),
@@ -423,6 +435,11 @@
               }
             } else {
               // Evento FaucetSent(address recipient, uint256 amount, uint256 timestamp)
+              console.log('📦 Evento FaucetSent:', {
+                recipient: event.args[0],
+                amount: ethers.formatEther(event.args[1]),
+                timestamp: Number(event.args[2])
+              })
               return {
                 recipient: event.args[0],
                 amount: ethers.formatEther(event.args[1]),
@@ -441,8 +458,10 @@
           .slice(0, 20) // Últimas 20 transacciones
         
         console.log('✅ Historial cargado:', history.length, 'transacciones')
+        console.log('📋 Historial completo:', history)
       } else {
         console.log('⚠️ No se encontraron transacciones')
+        console.log('💡 Esto es normal si el faucet no se ha usado aún')
         history = []
       }
       
@@ -705,7 +724,15 @@
       {#if loadingHistory}
         <p class="loading-text">Cargando historial desde blockchain...</p>
       {:else if history.length === 0}
-        <p class="empty-text">No hay transacciones registradas aún</p>
+        <p class="empty-text">
+          {#if contractType === 'improved-wallet'}
+            No hay transacciones del faucet registradas aún en Sepolia.
+            <br><br>
+            💡 El historial mostrará las transferencias realizadas desde el contrato usando la función sendTo().
+          {:else}
+            No hay transacciones registradas aún en Hoodi.
+          {/if}
+        </p>
       {:else}
         <div class="history-list">
           {#each history as entry}
