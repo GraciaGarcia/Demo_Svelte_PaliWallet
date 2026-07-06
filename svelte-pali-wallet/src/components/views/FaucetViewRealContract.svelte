@@ -394,9 +394,17 @@
       
       if (contractType === 'improved-wallet') {
         // Para ImprovedWalletContract: buscar eventos Transfer
-        filter = faucetContract.filters.Transfer()
+        // IMPORTANTE: Filtrar solo transferencias donde TÚ (owner) eres el remitente
+        // Esto evita mostrar todos los depósitos y solo muestra distribuciones del faucet
+        
+        // Primero obtener el owner del contrato
+        const owner = await faucetContract.owner()
+        console.log('👤 Owner del contrato:', owner)
+        
+        // Filtrar eventos Transfer donde FROM = owner (solo distribuciones del faucet)
+        filter = faucetContract.filters.Transfer(owner, null) // from=owner, to=any
         events = await faucetContract.queryFilter(filter, 0, 'latest')
-        console.log(`✅ Encontrados ${events.length} eventos Transfer`)
+        console.log(`✅ Encontrados ${events.length} eventos Transfer del faucet (desde owner)`)
       } else {
         // Para contrato Faucet: buscar eventos FaucetSent
         filter = faucetContract.filters.FaucetSent()
@@ -465,48 +473,40 @@
       try {
         console.log('🔄 Intentando con API del explorer...')
         
-        // Determinar el topic del evento según el tipo de contrato
-        let eventSignature
         if (contractType === 'improved-wallet') {
-          eventSignature = "Transfer(address,address,uint256,uint256)"
+          // Para ImprovedWallet, necesitamos filtrar por el owner como remitente
+          console.log('⚠️ Para ImprovedWallet, el API del explorer requiere filtros avanzados')
+          console.log('💡 Usando solo el método RPC directo para este tipo de contrato')
+          history = []
         } else {
-          eventSignature = "FaucetSent(address,uint256,uint256)"
-        }
-        
-        const url = `${config.explorerApi}?module=logs&action=getLogs` +
-          `&address=${config.address}` +
-          `&fromBlock=0` +
-          `&toBlock=latest` +
-          `&topic0=0x` + ethers.id(eventSignature).slice(2) +
-          (config.apiKey ? `&apikey=${config.apiKey}` : '')
-        
-        console.log('📡 URL:', url)
-        
-        const response = await fetch(url)
-        const data = await response.json()
-        
-        console.log('📊 Respuesta del explorer:', data)
-        
-        if (data.status === '1' && data.result && Array.isArray(data.result)) {
-          const iface = new ethers.Interface(currentABI)
+          // Para contrato Faucet: buscar eventos FaucetSent
+          const eventSignature = "FaucetSent(address,uint256,uint256)"
           
-          history = data.result
-            .map(log => {
-              try {
-                const decoded = iface.parseLog({
-                  topics: log.topics,
-                  data: log.data
-                })
-                
-                if (contractType === 'improved-wallet') {
-                  return {
-                    recipient: decoded.args[1], // to
-                    amount: ethers.formatEther(decoded.args[2]),
-                    timestamp: Number(decoded.args[3]),
-                    txHash: log.transactionHash,
-                    blockNumber: parseInt(log.blockNumber, 16)
-                  }
-                } else {
+          const url = `${config.explorerApi}?module=logs&action=getLogs` +
+            `&address=${config.address}` +
+            `&fromBlock=0` +
+            `&toBlock=latest` +
+            `&topic0=0x` + ethers.id(eventSignature).slice(2) +
+            (config.apiKey ? `&apikey=${config.apiKey}` : '')
+          
+          console.log('📡 URL:', url)
+          
+          const response = await fetch(url)
+          const data = await response.json()
+          
+          console.log('📊 Respuesta del explorer:', data)
+          
+          if (data.status === '1' && data.result && Array.isArray(data.result)) {
+            const iface = new ethers.Interface(currentABI)
+            
+            history = data.result
+              .map(log => {
+                try {
+                  const decoded = iface.parseLog({
+                    topics: log.topics,
+                    data: log.data
+                  })
+                  
                   return {
                     recipient: decoded.args[0],
                     amount: ethers.formatEther(decoded.args[1]),
@@ -514,20 +514,20 @@
                     txHash: log.transactionHash,
                     blockNumber: parseInt(log.blockNumber, 16)
                   }
+                } catch (err) {
+                  console.error('Error decodificando log:', err)
+                  return null
                 }
-              } catch (err) {
-                console.error('Error decodificando log:', err)
-                return null
-              }
-            })
-            .filter(e => e !== null)
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 20)
-          
-          console.log('✅ Historial cargado desde explorer:', history.length, 'transacciones')
-        } else {
-          console.log('⚠️ Explorer no devolvió resultados:', data)
-          history = []
+              })
+              .filter(e => e !== null)
+              .sort((a, b) => b.timestamp - a.timestamp)
+              .slice(0, 20)
+            
+            console.log('✅ Historial cargado desde explorer:', history.length, 'transacciones')
+          } else {
+            console.log('⚠️ Explorer no devolvió resultados:', data)
+            history = []
+          }
         }
       } catch (explorerErr) {
         console.error('❌ Error con API del explorer:', explorerErr)
