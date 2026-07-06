@@ -48,30 +48,6 @@ export const FAUCET_CONTRACTS: Record<string, FaucetConfig> = {
     amountPerRequest: '0.01', // Mínimo del contrato
     defaultBalance: '0', // Se actualizará dinámicamente
   },
-  
-  // Polygon Mumbai Testnet - Pendiente de desplegar
-  '80001': {
-    address: '0x0000000000000000000000000000000000000000', // ⚠️ ACTUALIZAR
-    explorerApi: 'https://api-testnet.polygonscan.com/api',
-    explorerUrl: 'https://mumbai.polygonscan.com',
-    rpcUrl: 'https://rpc-mumbai.maticvigil.com',
-    networkName: 'Mumbai',
-    symbol: 'MATIC',
-    chainId: '80001',
-    apiKey: '', // Obtener en https://polygonscan.com/apis
-  },
-  
-  // BSC Testnet - Pendiente de desplegar
-  '97': {
-    address: '0x0000000000000000000000000000000000000000', // ⚠️ ACTUALIZAR
-    explorerApi: 'https://api-testnet.bscscan.com/api',
-    explorerUrl: 'https://testnet.bscscan.com',
-    rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
-    networkName: 'BSC Testnet',
-    symbol: 'BNB',
-    chainId: '97',
-    apiKey: '', // Obtener en https://bscscan.com/apis
-  },
 }
 
 /**

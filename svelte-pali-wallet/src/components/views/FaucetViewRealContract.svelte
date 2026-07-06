@@ -453,11 +453,20 @@
       // Si falla, intentar con la API del explorer (método alternativo)
       try {
         console.log('🔄 Intentando con API del explorer...')
+        
+        // Determinar el topic del evento según el tipo de contrato
+        let eventSignature
+        if (contractType === 'improved-wallet') {
+          eventSignature = "Transfer(address,address,uint256,uint256)"
+        } else {
+          eventSignature = "FaucetSent(address,uint256,uint256)"
+        }
+        
         const url = `${config.explorerApi}?module=logs&action=getLogs` +
           `&address=${config.address}` +
           `&fromBlock=0` +
           `&toBlock=latest` +
-          `&topic0=0x` + ethers.id("FaucetSent(address,uint256,uint256)").slice(2) +
+          `&topic0=0x` + ethers.id(eventSignature).slice(2) +
           (config.apiKey ? `&apikey=${config.apiKey}` : '')
         
         console.log('📡 URL:', url)
@@ -468,7 +477,7 @@
         console.log('📊 Respuesta del explorer:', data)
         
         if (data.status === '1' && data.result && Array.isArray(data.result)) {
-          const iface = new ethers.Interface(FAUCET_ABI)
+          const iface = new ethers.Interface(currentABI)
           
           history = data.result
             .map(log => {
@@ -478,12 +487,22 @@
                   data: log.data
                 })
                 
-                return {
-                  recipient: decoded.args[0],
-                  amount: ethers.formatEther(decoded.args[1]),
-                  timestamp: Number(decoded.args[2]),
-                  txHash: log.transactionHash,
-                  blockNumber: parseInt(log.blockNumber, 16)
+                if (contractType === 'improved-wallet') {
+                  return {
+                    recipient: decoded.args[1], // to
+                    amount: ethers.formatEther(decoded.args[2]),
+                    timestamp: Number(decoded.args[3]),
+                    txHash: log.transactionHash,
+                    blockNumber: parseInt(log.blockNumber, 16)
+                  }
+                } else {
+                  return {
+                    recipient: decoded.args[0],
+                    amount: ethers.formatEther(decoded.args[1]),
+                    timestamp: Number(decoded.args[2]),
+                    txHash: log.transactionHash,
+                    blockNumber: parseInt(log.blockNumber, 16)
+                  }
                 }
               } catch (err) {
                 console.error('Error decodificando log:', err)
@@ -544,10 +563,8 @@
       bind:value={selectedChainId}
       disabled={loading}
     >
-      <option value="560048">Ethereum Hoodi EVM (Chain ID: 560048) ✅</option>
-      <option value="11155111">Sepolia (Ethereum Testnet) ✅ ImprovedWallet</option>
-      <option value="80001">Mumbai (Polygon Testnet) - Próximamente</option>
-      <option value="97">BSC Testnet - Próximamente</option>
+      <option value="560048">Hoodi EVM (Chain ID: 560048) - Faucet Nativo ✅</option>
+      <option value="11155111">Sepolia Testnet (Chain ID: 11155111) - ImprovedWallet ✅</option>
     </select>
   </div>
 
