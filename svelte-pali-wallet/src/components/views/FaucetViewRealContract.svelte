@@ -3,6 +3,7 @@
   import { ethers } from 'ethers'
   import { getFaucetConfig, hasFaucetContract } from '../../lib/contracts/faucetConfig'
   import { FAUCET_ABI } from '../../lib/contracts/faucetABI'
+  import { IMPROVED_WALLET_FAUCET_ABI } from '../../lib/contracts/improvedWalletFaucetABI'
 
   let recipientAddress = ''
   let selectedChainId = '560048' // Hoodi por defecto (Chain ID correcto)
@@ -24,6 +25,8 @@
 
   $: config = getFaucetConfig(selectedChainId)
   $: hasContract = hasFaucetContract(selectedChainId)
+  $: contractType = config?.contractType || 'faucet'
+  $: currentABI = contractType === 'improved-wallet' ? IMPROVED_WALLET_FAUCET_ABI : FAUCET_ABI
   
   onMount(() => {
     if (hasContract) {
@@ -82,31 +85,55 @@
       
       const faucetContract = new ethers.Contract(
         config.address,
-        FAUCET_ABI,
+        currentABI,
         provider
       )
       
       console.log('📞 Llamando a funciones del contrato...')
+      console.log('📋 Tipo de contrato:', contractType)
       
-      const [balance, amount, cooldown] = await Promise.all([
-        faucetContract.getBalance(),
-        faucetContract.amount(),
-        faucetContract.cooldown()
-      ])
+      let balance, amount, cooldown
       
-      console.log('✅ Respuestas del contrato:')
-      console.log('  - Balance:', balance.toString())
-      console.log('  - Amount:', amount.toString())
-      console.log('  - Cooldown:', cooldown.toString())
+      if (contractType === 'improved-wallet') {
+        // Para ImprovedWalletContract
+        balance = await faucetContract.getContractBalance()
+        amount = ethers.parseEther(config.amountPerRequest || '0.01')
+        cooldown = 0 // No tiene cooldown
+        
+        console.log('✅ Respuestas del ImprovedWalletContract:')
+        console.log('  - Balance:', balance.toString())
+        console.log('  - Amount (configurado):', amount.toString())
+        console.log('  - Cooldown: N/A (sin cooldown)')
+      } else {
+        // Para contrato Faucet original
+        [balance, amount, cooldown] = await Promise.all([
+          faucetContract.getBalance(),
+          faucetContract.amount(),
+          faucetContract.cooldown()
+        ])
+        
+        console.log('✅ Respuestas del contrato Faucet:')
+        console.log('  - Balance:', balance.toString())
+        console.log('  - Amount:', amount.toString())
+        console.log('  - Cooldown:', cooldown.toString())
+      }
       
       // SOLO actualizar si los valores son válidos
       if (balance && balance.toString() !== '0') {
         contractBalance = ethers.formatEther(balance)
+      } else if (config.defaultBalance) {
+        contractBalance = config.defaultBalance
       }
+      
       if (amount && amount.toString() !== '0') {
         amountPerRequest = ethers.formatEther(amount)
+      } else if (config.amountPerRequest) {
+        amountPerRequest = config.amountPerRequest
       }
-      if (cooldown) {
+      
+      if (contractType === 'improved-wallet') {
+        cooldownTime = 0 // Sin cooldown
+      } else if (cooldown) {
         cooldownTime = Number(cooldown)
       }
       
@@ -136,17 +163,24 @@
       return
     }
     
+    // Si es ImprovedWallet, siempre puede solicitar (sin cooldown)
+    if (contractType === 'improved-wallet') {
+      canRequestNow = true
+      timeRemaining = 0
+      return
+    }
+    
     try {
       const provider = new ethers.JsonRpcProvider(config.rpcUrl)
       const faucetContract = new ethers.Contract(
         config.address,
-        FAUCET_ABI,
+        currentABI,
         provider
       )
       
       const [canReq, timeLeft] = await Promise.all([
         faucetContract.canRequest(recipientAddress),
-        faucetContract.nextRequestTime(recipientAddress)  // ← Cambiado de timeUntilNextRequest
+        faucetContract.nextRequestTime(recipientAddress)
       ])
       
       canRequestNow = canReq
@@ -224,16 +258,43 @@
       // Conectar al contrato con el signer para poder enviar transacciones
       const faucetContract = new ethers.Contract(
         config.address,
-        FAUCET_ABI,
+        currentABI,
         signer
       )
       
-      // Llamar a la función requestFunds con la dirección del destinatario
-      console.log('📞 Llamando a requestFunds...')
-      console.log('   Destinatario:', recipientAddress)
-      console.log('   Contrato:', config.address)
+      console.log('📞 Tipo de contrato:', contractType)
       
-      const tx = await faucetContract.requestFunds(recipientAddress)
+      let tx
+      
+      if (contractType === 'improved-wallet') {
+        // Para ImprovedWalletContract: usar sendTo(recipient, amount)
+        console.log('📞 Llamando a sendTo (ImprovedWallet)...')
+        console.log('   Destinatario:', recipientAddress)
+        console.log('   Cantidad:', amountPerRequest, 'ETH')
+        console.log('   Contrato:', config.address)
+        
+        const amountInWei = ethers.parseEther(amountPerRequest)
+        
+        // IMPORTANTE: En ImprovedWallet, el owner debe tener balance en el contrato
+        // Verificar que el signer tenga fondos en el contrato
+        const userBalance = await faucetContract.getBalanceOf(await signer.getAddress())
+        console.log('   Balance del usuario en contrato:', ethers.formatEther(userBalance), 'ETH')
+        
+        if (userBalance < amountInWei) {
+          error = `⚠️ Fondos insuficientes en el contrato. Balance: ${ethers.formatEther(userBalance)} ETH`
+          loading = false
+          return
+        }
+        
+        tx = await faucetContract.sendTo(recipientAddress, amountInWei)
+      } else {
+        // Para contrato Faucet original: usar requestFunds(recipient)
+        console.log('📞 Llamando a requestFunds (Faucet)...')
+        console.log('   Destinatario:', recipientAddress)
+        console.log('   Contrato:', config.address)
+        
+        tx = await faucetContract.requestFunds(recipientAddress)
+      }
       
       console.log('✅ Transacción enviada')
       console.log('   TX Hash:', tx.hash)
@@ -323,29 +384,53 @@
       
       const faucetContract = new ethers.Contract(
         config.address,
-        FAUCET_ABI,
+        currentABI,
         provider
       )
       
-      console.log('🔍 Buscando eventos FaucetSent...')
+      console.log('🔍 Buscando eventos...')
+      console.log('📋 Tipo de contrato:', contractType)
       
-      // Obtener eventos FaucetSent desde el bloque 0
-      const filter = faucetContract.filters.FaucetSent()
-      const events = await faucetContract.queryFilter(filter, 0, 'latest')
+      // Obtener eventos según el tipo de contrato
+      let filter, events
       
-      console.log(`✅ Encontrados ${events.length} eventos`)
+      if (contractType === 'improved-wallet') {
+        // Para ImprovedWalletContract: buscar eventos Transfer
+        filter = faucetContract.filters.Transfer()
+        events = await faucetContract.queryFilter(filter, 0, 'latest')
+        console.log(`✅ Encontrados ${events.length} eventos Transfer`)
+      } else {
+        // Para contrato Faucet: buscar eventos FaucetSent
+        filter = faucetContract.filters.FaucetSent()
+        events = await faucetContract.queryFilter(filter, 0, 'latest')
+        console.log(`✅ Encontrados ${events.length} eventos FaucetSent`)
+      }
       
       if (events.length > 0) {
         history = await Promise.all(
           events.map(async (event) => {
             const block = await event.getBlock()
-            return {
-              recipient: event.args[0],
-              amount: ethers.formatEther(event.args[1]),
-              timestamp: Number(event.args[2]),
-              txHash: event.transactionHash,
-              blockNumber: event.blockNumber,
-              blockTime: block.timestamp
+            
+            if (contractType === 'improved-wallet') {
+              // Evento Transfer(address from, address to, uint256 amount, uint256 timestamp)
+              return {
+                recipient: event.args[1], // to
+                amount: ethers.formatEther(event.args[2]),
+                timestamp: Number(event.args[3]),
+                txHash: event.transactionHash,
+                blockNumber: event.blockNumber,
+                blockTime: block.timestamp
+              }
+            } else {
+              // Evento FaucetSent(address recipient, uint256 amount, uint256 timestamp)
+              return {
+                recipient: event.args[0],
+                amount: ethers.formatEther(event.args[1]),
+                timestamp: Number(event.args[2]),
+                txHash: event.transactionHash,
+                blockNumber: event.blockNumber,
+                blockTime: block.timestamp
+              }
             }
           })
         )
@@ -460,7 +545,7 @@
       disabled={loading}
     >
       <option value="560048">Ethereum Hoodi EVM (Chain ID: 560048) ✅</option>
-      <option value="11155111">Sepolia (Ethereum Testnet) - Próximamente</option>
+      <option value="11155111">Sepolia (Ethereum Testnet) ✅ ImprovedWallet</option>
       <option value="80001">Mumbai (Polygon Testnet) - Próximamente</option>
       <option value="97">BSC Testnet - Próximamente</option>
     </select>
@@ -477,6 +562,16 @@
     <div class="faucet-card">
       <!-- Info del Contrato -->
       <div class="contract-info">
+        <div class="info-row">
+          <span class="info-label">Tipo de Contrato:</span>
+          <span class="info-value">
+            {#if contractType === 'improved-wallet'}
+              ImprovedWallet (sin cooldown)
+            {:else}
+              Faucet Público
+            {/if}
+          </span>
+        </div>
         <div class="info-row">
           <span class="info-label">Dirección del Contrato:</span>
           <a 
@@ -495,10 +590,12 @@
           <span class="info-label">Cantidad por solicitud:</span>
           <span class="info-value">{parseFloat(amountPerRequest).toFixed(4)} {config.symbol}</span>
         </div>
-        <div class="info-row">
-          <span class="info-label">Tiempo de espera:</span>
-          <span class="info-value">{cooldownTime / 60} minutos</span>
-        </div>
+        {#if contractType !== 'improved-wallet'}
+          <div class="info-row">
+            <span class="info-label">Tiempo de espera:</span>
+            <span class="info-value">{cooldownTime / 60} minutos</span>
+          </div>
+        {/if}
       </div>
 
 
@@ -630,13 +727,18 @@
   <div class="info-section">
     <h3>ℹ️ Cómo funciona</h3>
     <ul>
-      <li><strong>Contrato Real:</strong> Este faucet usa un smart contract desplegado en blockchain</li>
+      <li><strong>Multi-Red:</strong> Soporta Hoodi (Faucet nativo) y Sepolia (ImprovedWallet)</li>
+      <li><strong>Contratos Reales:</strong> Usa smart contracts desplegados en blockchain</li>
       <li><strong>Transacciones Verificables:</strong> Todas las transacciones son públicas y verificables</li>
       <li><strong>Conexión Rápida:</strong> Solo necesitas conectar tu wallet para firmar la transacción</li>
-      <li><strong>No requiere iniciar sesión:</strong> Puedes usar el faucet sin estar autenticado en la aplicación</li>
-      <li><strong>Cooldown:</strong> Debes esperar {cooldownTime / 60} minutos entre solicitudes</li>
+      <li><strong>Sin autenticación:</strong> Puedes usar el faucet sin estar autenticado en la aplicación</li>
+      {#if contractType === 'improved-wallet'}
+        <li><strong>Sin Cooldown (Sepolia):</strong> El contrato ImprovedWallet no tiene límite de tiempo</li>
+        <li><strong>Requiere Fondos:</strong> El owner debe tener fondos depositados en el contrato</li>
+      {:else}
+        <li><strong>Cooldown (Hoodi):</strong> Debes esperar {cooldownTime / 60} minutos entre solicitudes</li>
+      {/if}
       <li><strong>Historial Real:</strong> El historial se obtiene directamente desde la blockchain</li>
-      <li><strong>Multi-Red:</strong> Puedes desplegar el contrato en diferentes testnets</li>
     </ul>
   </div>
 </div>

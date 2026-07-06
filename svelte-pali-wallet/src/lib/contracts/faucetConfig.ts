@@ -13,6 +13,9 @@ export interface FaucetConfig {
   symbol: string
   chainId: string
   apiKey?: string
+  contractType?: 'faucet' | 'improved-wallet' // Tipo de contrato
+  amountPerRequest?: string // Cantidad fija por solicitud
+  defaultBalance?: string // Balance por defecto para mostrar
 }
 
 export const FAUCET_CONTRACTS: Record<string, FaucetConfig> = {
@@ -26,18 +29,24 @@ export const FAUCET_CONTRACTS: Record<string, FaucetConfig> = {
     symbol: 'HOODI',
     chainId: '560048',
     apiKey: '',
+    contractType: 'faucet',
+    amountPerRequest: '0.01',
+    defaultBalance: '0.46',
   },
   
-  // Sepolia Testnet (Ethereum) - Pendiente de desplegar
+  // Sepolia Testnet (Ethereum) - ✅ Usando ImprovedWalletContract
   '11155111': {
-    address: '0x0000000000000000000000000000000000000000', // ⚠️ ACTUALIZAR después de desplegar
+    address: '0x1fC9203ECC40dFC072bd4b087FE70004A1D2340F', // ✅ ImprovedWalletContract
     explorerApi: 'https://api-sepolia.etherscan.io/api',
     explorerUrl: 'https://sepolia.etherscan.io',
-    rpcUrl: 'https://rpc.sepolia.org',
+    rpcUrl: 'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', // RPC público de Infura
     networkName: 'Sepolia',
     symbol: 'ETH',
     chainId: '11155111',
     apiKey: '', // Obtener en https://etherscan.io/apis
+    contractType: 'improved-wallet',
+    amountPerRequest: '0.01', // Mínimo del contrato
+    defaultBalance: '0', // Se actualizará dinámicamente
   },
   
   // Polygon Mumbai Testnet - Pendiente de desplegar
