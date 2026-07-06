@@ -244,7 +244,7 @@
       console.log('  - Chain ID esperado (dec):', selectedChainId)
       
       if (currentChainId.toLowerCase() !== expectedChainId.toLowerCase()) {
-        error = `⚠️ Red incorrecta. Tu wallet está en Chain ID ${parseInt(currentChainId, 16)}, pero necesitas estar en Chain ID ${selectedChainId} (Hoodi)`
+        error = `⚠️ Red incorrecta. Tu wallet está en ${config.networkName === 'Sepolia' ? 'Hoodi' : 'Sepolia'}, pero necesitas estar en ${config.networkName} (Chain ID ${selectedChainId})`
         loading = false
         return
       }
