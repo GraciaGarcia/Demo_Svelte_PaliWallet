@@ -368,78 +368,102 @@
     console.log('📍 Chain ID:', config.chainId)
     console.log('📋 Tipo de contrato:', contractType)
     console.log('📍 Dirección:', config.address)
-    console.log('🔗 RPC:', config.rpcUrl)
     
     loadingHistory = true
     
     try {
-      // Intentar obtener eventos directamente del contrato usando el provider
-      console.log('📡 Conectando al provider para obtener eventos...')
-      
-      // Para Sepolia, usar siempre el RPC configurado (más confiable)
-      console.log('⚠️ Usando JsonRpcProvider')
-      const provider = new ethers.JsonRpcProvider(config.rpcUrl)
-      
-      const faucetContract = new ethers.Contract(
-        config.address,
-        currentABI,
-        provider
-      )
-      
-      console.log('🔍 Buscando eventos...')
-      console.log('📋 Tipo de contrato:', contractType)
-      
-      // Obtener eventos según el tipo de contrato
-      let filter, events
-      
       if (contractType === 'improved-wallet') {
-        // Para ImprovedWalletContract: buscar eventos Transfer
-        // IMPORTANTE: Filtrar solo transferencias donde TÚ (owner) eres el remitente
-        // Esto evita mostrar todos los depósitos y solo muestra distribuciones del faucet
+        // Para Sepolia ImprovedWallet: Obtener eventos Transfer desde Etherscan
+        console.log('🔍 Obteniendo eventos Transfer de Etherscan...')
         
-        // Primero obtener el owner del contrato
-        const owner = await faucetContract.owner()
-        console.log('👤 Owner del contrato:', owner)
+        // Usar la API de Etherscan para obtener las transacciones internas
+        const url = `${config.explorerApi}?module=account&action=txlist&address=${config.address}&startblock=0&endblock=99999999&sort=desc&apikey=${config.apiKey || ''}`
         
-        // Filtrar eventos Transfer donde FROM = owner (solo distribuciones del faucet)
-        filter = faucetContract.filters.Transfer(owner, null) // from=owner, to=any
-        events = await faucetContract.queryFilter(filter, 0, 'latest')
-        console.log(`✅ Encontrados ${events.length} eventos Transfer del faucet (desde owner)`)
-      } else {
-        // Para contrato Faucet: buscar eventos FaucetSent
-        filter = faucetContract.filters.FaucetSent()
-        events = await faucetContract.queryFilter(filter, 0, 'latest')
-        console.log(`✅ Encontrados ${events.length} eventos FaucetSent`)
-      }
-      
-      if (events.length > 0) {
-        history = await Promise.all(
-          events.map(async (event) => {
-            const block = await event.getBlock()
-            
-            if (contractType === 'improved-wallet') {
-              // Evento Transfer(address from, address to, uint256 amount, uint256 timestamp)
-              console.log('📦 Evento Transfer:', {
-                from: event.args[0],
-                to: event.args[1],
-                amount: ethers.formatEther(event.args[2]),
-                timestamp: Number(event.args[3])
-              })
-              return {
-                recipient: event.args[1], // to
-                amount: ethers.formatEther(event.args[2]),
-                timestamp: Number(event.args[3]),
-                txHash: event.transactionHash,
-                blockNumber: event.blockNumber,
-                blockTime: block.timestamp
+        console.log('📡 URL Etherscan:', url)
+        
+        const response = await fetch(url)
+        const data = await response.json()
+        
+        console.log('📊 Respuesta de Etherscan:', data)
+        
+        if (data.status === '1' && data.result && Array.isArray(data.result)) {
+          // Obtener detalles de cada transacción para encontrar eventos Transfer
+          const provider = new ethers.JsonRpcProvider(config.rpcUrl)
+          const faucetContract = new ethers.Contract(config.address, currentABI, provider)
+          const owner = await faucetContract.owner()
+          
+          console.log('👤 Owner del contrato:', owner)
+          
+          // Filtrar y procesar transacciones
+          const transferPromises = data.result
+            .filter(tx => tx.to && tx.to.toLowerCase() === config.address.toLowerCase())
+            .slice(0, 50) // Limitar a últimas 50 para no sobrecargar
+            .map(async (tx) => {
+              try {
+                const receipt = await provider.getTransactionReceipt(tx.hash)
+                if (!receipt || !receipt.logs) return null
+                
+                // Buscar eventos Transfer en los logs
+                const transferEvents = receipt.logs
+                  .map(log => {
+                    try {
+                      const parsed = faucetContract.interface.parseLog({
+                        topics: log.topics,
+                        data: log.data
+                      })
+                      
+                      // Solo eventos Transfer donde from = owner
+                      if (parsed && parsed.name === 'Transfer' && 
+                          parsed.args[0].toLowerCase() === owner.toLowerCase()) {
+                        return {
+                          recipient: parsed.args[1],
+                          amount: ethers.formatEther(parsed.args[2]),
+                          timestamp: Number(parsed.args[3]),
+                          txHash: tx.hash,
+                          blockNumber: parseInt(tx.blockNumber)
+                        }
+                      }
+                    } catch (e) {
+                      return null
+                    }
+                    return null
+                  })
+                  .filter(e => e !== null)
+                
+                return transferEvents[0] // Primera transferencia del owner en esta TX
+              } catch (err) {
+                console.error('Error procesando TX:', tx.hash, err)
+                return null
               }
-            } else {
-              // Evento FaucetSent(address recipient, uint256 amount, uint256 timestamp)
-              console.log('📦 Evento FaucetSent:', {
-                recipient: event.args[0],
-                amount: ethers.formatEther(event.args[1]),
-                timestamp: Number(event.args[2])
-              })
+            })
+          
+          const transfers = await Promise.all(transferPromises)
+          history = transfers
+            .filter(t => t !== null)
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, 20)
+          
+          console.log('✅ Historial cargado:', history.length, 'distribuciones del faucet')
+          console.log('📋 Historial:', history)
+        } else {
+          console.log('⚠️ Etherscan no devolvió resultados:', data.message || data)
+          history = []
+        }
+      } else {
+        // Para Hoodi: Usar el método directo del RPC
+        console.log('📡 Usando RPC directo para Hoodi...')
+        const provider = new ethers.JsonRpcProvider(config.rpcUrl)
+        const faucetContract = new ethers.Contract(config.address, currentABI, provider)
+        
+        const filter = faucetContract.filters.FaucetSent()
+        const events = await faucetContract.queryFilter(filter, 0, 'latest')
+        
+        console.log(`✅ Encontrados ${events.length} eventos FaucetSent`)
+        
+        if (events.length > 0) {
+          history = await Promise.all(
+            events.map(async (event) => {
+              const block = await event.getBlock()
               return {
                 recipient: event.args[0],
                 amount: ethers.formatEther(event.args[1]),
@@ -448,91 +472,22 @@
                 blockNumber: event.blockNumber,
                 blockTime: block.timestamp
               }
-            }
-          })
-        )
-        
-        // Ordenar por más reciente primero
-        history = history
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .slice(0, 20) // Últimas 20 transacciones
-        
-        console.log('✅ Historial cargado:', history.length, 'transacciones')
-        console.log('📋 Historial completo:', history)
-      } else {
-        console.log('⚠️ No se encontraron transacciones')
-        console.log('💡 Esto es normal si el faucet no se ha usado aún')
-        history = []
+            })
+          )
+          
+          history = history
+            .sort((a, b) => b.timestamp - a.timestamp)
+            .slice(0, 20)
+          
+          console.log('✅ Historial cargado:', history.length, 'transacciones')
+        } else {
+          history = []
+        }
       }
-      
     } catch (err) {
       console.error('❌ Error cargando historial:', err)
       console.error('Detalles:', err.message)
-      
-      // Si falla, intentar con la API del explorer (método alternativo)
-      try {
-        console.log('🔄 Intentando con API del explorer...')
-        
-        if (contractType === 'improved-wallet') {
-          // Para ImprovedWallet, necesitamos filtrar por el owner como remitente
-          console.log('⚠️ Para ImprovedWallet, el API del explorer requiere filtros avanzados')
-          console.log('💡 Usando solo el método RPC directo para este tipo de contrato')
-          history = []
-        } else {
-          // Para contrato Faucet: buscar eventos FaucetSent
-          const eventSignature = "FaucetSent(address,uint256,uint256)"
-          
-          const url = `${config.explorerApi}?module=logs&action=getLogs` +
-            `&address=${config.address}` +
-            `&fromBlock=0` +
-            `&toBlock=latest` +
-            `&topic0=0x` + ethers.id(eventSignature).slice(2) +
-            (config.apiKey ? `&apikey=${config.apiKey}` : '')
-          
-          console.log('📡 URL:', url)
-          
-          const response = await fetch(url)
-          const data = await response.json()
-          
-          console.log('📊 Respuesta del explorer:', data)
-          
-          if (data.status === '1' && data.result && Array.isArray(data.result)) {
-            const iface = new ethers.Interface(currentABI)
-            
-            history = data.result
-              .map(log => {
-                try {
-                  const decoded = iface.parseLog({
-                    topics: log.topics,
-                    data: log.data
-                  })
-                  
-                  return {
-                    recipient: decoded.args[0],
-                    amount: ethers.formatEther(decoded.args[1]),
-                    timestamp: Number(decoded.args[2]),
-                    txHash: log.transactionHash,
-                    blockNumber: parseInt(log.blockNumber, 16)
-                  }
-                } catch (err) {
-                  console.error('Error decodificando log:', err)
-                  return null
-                }
-              })
-              .filter(e => e !== null)
-              .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, 20)
-            
-            console.log('✅ Historial cargado desde explorer:', history.length, 'transacciones')
-          } else {
-            console.log('⚠️ Explorer no devolvió resultados:', data)
-            history = []
-          }
-        }
-      } catch (explorerErr) {
-        console.error('❌ Error con API del explorer:', explorerErr)
-        history = []
-      }
+      history = []
     } finally {
       loadingHistory = false
     }
